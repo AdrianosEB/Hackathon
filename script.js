@@ -106,15 +106,11 @@ function addLine(data = {}) {
   `;
 
 
-  // Remove a claim line
-
   row
     .querySelector(
       ".remove-btn"
     )
     .onclick = () => {
-
-      // Always leave at least one line
 
       if (
         lineItems.children.length > 1
@@ -217,12 +213,8 @@ $("claimForm")
         }
 
 
-        // Show result
-
         renderResult(data);
 
-
-        // Immediately refresh dashboard
 
         await refreshDashboard();
 
@@ -373,6 +365,200 @@ function renderResult(claim) {
     `risk-${claim.riskLevel}`;
 
 
+  // ---------------------------------------------
+  // Detect whether AI participated
+  // ---------------------------------------------
+
+  const aiWasUsed =
+    claim.aiAvailable === true ||
+    claim.analysisMode === "hybrid" ||
+    claim.flags.some(
+      (flag) =>
+        Array.isArray(flag.detectedBy) &&
+        flag.detectedBy.includes("ai")
+    );
+
+
+  const analysisModeText =
+    aiWasUsed
+      ? "Hybrid analysis: Rules + AI"
+      : "Rules-based analysis";
+
+
+  // ---------------------------------------------
+  // Build finding cards
+  // ---------------------------------------------
+
+  const findingsHtml =
+    claim.flags.length
+
+      ? claim.flags
+          .map((flag) => {
+
+            const detectedBy =
+              Array.isArray(flag.detectedBy)
+                ? flag.detectedBy
+                : ["rules"];
+
+
+            const rulesDetected =
+              detectedBy.includes("rules");
+
+
+            const aiDetected =
+              detectedBy.includes("ai");
+
+
+            let sourceBadges = "";
+
+
+            if (rulesDetected) {
+
+              sourceBadges += `
+                <span class="analysis-source rules-source">
+                  RULES ✓
+                </span>
+              `;
+
+            }
+
+
+            if (aiDetected) {
+
+              sourceBadges += `
+                <span class="analysis-source ai-source">
+                  AI ✓
+                </span>
+              `;
+
+            }
+
+
+            let aiReviewHtml = "";
+
+
+            if (flag.aiReview) {
+
+              aiReviewHtml = `
+
+                <div class="ai-review">
+
+                  <div class="ai-review-title">
+                    AI EVIDENCE REVIEW
+                  </div>
+
+                  <p>
+                    ${escapeHtml(
+                      flag.aiReview.message || ""
+                    )}
+                  </p>
+
+                  ${
+                    flag.aiReview.evidence
+                      ? `
+                        <div class="ai-evidence">
+                          <strong>Evidence:</strong>
+                          ${escapeHtml(
+                            flag.aiReview.evidence
+                          )}
+                        </div>
+                      `
+                      : ""
+                  }
+
+                  ${
+                    flag.aiReview.reason
+                      ? `
+                        <div class="ai-reason">
+                          ${escapeHtml(
+                            flag.aiReview.reason
+                          )}
+                        </div>
+                      `
+                      : ""
+                  }
+
+                </div>
+
+              `;
+
+            }
+
+
+            return `
+
+              <div class="flag">
+
+                <div class="finding-header">
+
+                  <strong>
+                    ${escapeHtml(flag.message)}
+                  </strong>
+
+                  <span class="severity">
+                    ${escapeHtml(flag.severity)}
+                  </span>
+
+                </div>
+
+
+                ${
+                  flag.lineCode
+                    ? `
+                      <div class="finding-code">
+                        Procedure ${escapeHtml(
+                          flag.lineCode
+                        )}
+                      </div>
+                    `
+                    : ""
+                }
+
+
+                <div class="analysis-sources">
+                  ${sourceBadges}
+                </div>
+
+
+                <p>
+                  ${escapeHtml(
+                    flag.evidence || ""
+                  )}
+                </p>
+
+
+                ${aiReviewHtml}
+
+              </div>
+
+            `;
+
+          })
+          .join("")
+
+      : `
+
+          <div class="flag">
+
+            <strong>
+              No major screening signals detected.
+            </strong>
+
+            <p>
+              The current screening system did not
+              identify a major anomaly. This does not
+              guarantee claim correctness.
+            </p>
+
+          </div>
+
+        `;
+
+
+  // ---------------------------------------------
+  // Main result
+  // ---------------------------------------------
+
   box.innerHTML = `
 
     <div class="score-row">
@@ -405,7 +591,6 @@ function renderResult(claim) {
     </div>
 
 
-
     <h2>
       ${escapeHtml(claim.claimNumber)}
     </h2>
@@ -416,9 +601,30 @@ function renderResult(claim) {
     </p>
 
 
+    <div class="analysis-mode">
+
+      <strong>
+        ${analysisModeText}
+      </strong>
+
+      ${
+        aiWasUsed
+          ? `
+            <span>
+              AI evidence review completed
+            </span>
+          `
+          : `
+            <span>
+              AI unavailable — deterministic screening used
+            </span>
+          `
+      }
+
+    </div>
+
 
     <div class="result-meta">
-
 
       <div>
 
@@ -449,7 +655,7 @@ function renderResult(claim) {
       <div>
 
         <span>
-          FLAGS
+          FINDINGS
         </span>
 
         <strong>
@@ -476,80 +682,16 @@ function renderResult(claim) {
 
       </div>
 
-
     </div>
 
 
-
     <h3>
-      Evidence & screening signals
+      Evidence & anomaly findings
     </h3>
 
 
-
     <div class="flags">
-
-      ${
-        claim.flags.length
-
-        ?
-
-        claim.flags
-
-          .map(
-            (flag) => `
-
-              <div class="flag">
-
-                <strong>
-
-                  ${escapeHtml(flag.message)}
-
-                  <span class="severity">
-
-                    ${escapeHtml(flag.severity)}
-
-                  </span>
-
-                </strong>
-
-
-                <p>
-
-                  ${escapeHtml(flag.evidence || "")}
-
-                </p>
-
-              </div>
-
-            `
-          )
-
-          .join("")
-
-        :
-
-        `
-
-          <div class="flag">
-
-            <strong>
-              No major screening signals detected.
-            </strong>
-
-            <p>
-
-              This does not guarantee claim correctness;
-              it means the current MVP rules did not flag it.
-
-            </p>
-
-          </div>
-
-        `
-
-      }
-
+      ${findingsHtml}
     </div>
 
   `;
@@ -606,96 +748,92 @@ async function refreshDashboard() {
 
         data.claims.length
 
-        ?
+          ? data.claims
 
-        data.claims
+              .map(
+                (claim) => `
 
-          .map(
-            (claim) => `
-
-              <tr
-                data-id="${claim.id}"
-              >
-
-                <td>
-
-                  <strong>
-                    ${escapeHtml(claim.claimNumber)}
-                  </strong>
-
-                </td>
-
-
-                <td>
-
-                  ${escapeHtml(claim.providerName)}
-
-                </td>
-
-
-                <td>
-
-                  ${money(claim.totalBilled)}
-
-                </td>
-
-
-                <td>
-
-                  <span
-                    class="risk-badge risk-${claim.riskLevel}"
+                  <tr
+                    data-id="${claim.id}"
                   >
 
-                    ${
-                      claim.riskLevel === "review"
-                        ? "Review"
-                        : claim.riskLevel
-                    }
+                    <td>
 
-                  </span>
+                      <strong>
+                        ${escapeHtml(claim.claimNumber)}
+                      </strong>
+
+                    </td>
+
+
+                    <td>
+
+                      ${escapeHtml(claim.providerName)}
+
+                    </td>
+
+
+                    <td>
+
+                      ${money(claim.totalBilled)}
+
+                    </td>
+
+
+                    <td>
+
+                      <span
+                        class="risk-badge risk-${claim.riskLevel}"
+                      >
+
+                        ${
+                          claim.riskLevel === "review"
+                            ? "Review"
+                            : claim.riskLevel
+                        }
+
+                      </span>
+
+                    </td>
+
+
+                    <td>
+
+                      ${money(claim.reviewAmount)}
+
+                    </td>
+
+
+                    <td>
+
+                      ${claim.flags.length}
+
+                    </td>
+
+
+                  </tr>
+
+                `
+              )
+
+              .join("")
+
+          : `
+
+              <tr>
+
+                <td
+                  colspan="6"
+                  class="muted"
+                >
+
+                  No claims yet.
 
                 </td>
-
-
-                <td>
-
-                  ${money(claim.reviewAmount)}
-
-                </td>
-
-
-                <td>
-
-                  ${claim.flags.length}
-
-                </td>
-
 
               </tr>
 
-            `
-          )
-
-          .join("")
-
-        :
-
-        `
-
-          <tr>
-
-            <td
-              colspan="6"
-              class="muted"
-            >
-
-              No claims yet.
-
-            </td>
-
-          </tr>
-
-        `;
+            `;
 
 
     // Allow table rows to be clicked

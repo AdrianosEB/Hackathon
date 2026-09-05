@@ -7,7 +7,8 @@
     "dev": "node --watch server.js"
   },
   "dependencies": {
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2"
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "openai": "^7.10.0"
   }
 }
