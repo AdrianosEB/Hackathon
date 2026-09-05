@@ -141,6 +141,15 @@ export async function triggerVapiClarification(
     phoneNumberId:
       process.env.VAPI_PHONE_NUMBER_ID,
 
+    // Returned with the call in Vapi webhook payloads so the completed
+    // transcript can be associated with the originating claim.
+    metadata: {
+
+      claimNumber:
+        claim.claimNumber
+
+    },
+
     customer: {
 
       number:

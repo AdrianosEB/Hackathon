@@ -53,6 +53,31 @@ db.exec(`
 
 
 // --------------------------------------------------
+// Store completed Vapi clarification calls
+// --------------------------------------------------
+
+db.exec(`
+
+  CREATE TABLE IF NOT EXISTS vapi_call_transcripts (
+
+    call_id TEXT PRIMARY KEY,
+
+    claim_number TEXT,
+
+    transcript TEXT,
+
+    messages TEXT,
+
+    ended_reason TEXT,
+
+    received_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+  );
+
+`);
+
+
+// --------------------------------------------------
 // Insert analyzed claim
 // --------------------------------------------------
 
@@ -331,5 +356,115 @@ function parse(
     return fallback;
 
   }
+
+}
+
+
+// --------------------------------------------------
+// Store or update a completed Vapi call transcript
+// --------------------------------------------------
+
+export function saveVapiCallTranscript({
+  callId,
+  claimNumber,
+  transcript,
+  messages,
+  endedReason
+}) {
+
+  db
+    .prepare(`
+
+      INSERT INTO vapi_call_transcripts (
+
+        call_id,
+
+        claim_number,
+
+        transcript,
+
+        messages,
+
+        ended_reason
+
+      )
+
+      VALUES (?, ?, ?, ?, ?)
+
+      ON CONFLICT(call_id)
+      DO UPDATE SET
+
+        claim_number = excluded.claim_number,
+
+        transcript = excluded.transcript,
+
+        messages = excluded.messages,
+
+        ended_reason = excluded.ended_reason,
+
+        received_at = CURRENT_TIMESTAMP
+
+    `)
+    .run(
+      callId,
+      claimNumber || null,
+      transcript || null,
+      JSON.stringify(messages || []),
+      endedReason || null
+    );
+
+
+  return getVapiCallTranscript(callId);
+
+}
+
+
+// --------------------------------------------------
+// Retrieve one completed Vapi call transcript
+// --------------------------------------------------
+
+export function getVapiCallTranscript(callId) {
+
+  const row =
+    db
+      .prepare(`
+        SELECT *
+        FROM vapi_call_transcripts
+        WHERE call_id = ?
+      `)
+      .get(callId);
+
+
+  if (!row) {
+
+    return null;
+
+  }
+
+
+  return {
+
+    callId:
+      row.call_id,
+
+    claimNumber:
+      row.claim_number,
+
+    transcript:
+      row.transcript,
+
+    messages:
+      parse(
+        row.messages,
+        []
+      ),
+
+    endedReason:
+      row.ended_reason,
+
+    receivedAt:
+      row.received_at
+
+  };
 
 }

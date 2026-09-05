@@ -9,7 +9,9 @@ import {
   createClaim,
   getClaim,
   listClaims,
-  getDashboardStats
+  getDashboardStats,
+  getVapiCallTranscript,
+  saveVapiCallTranscript
 } from "./db.js";
 
 
@@ -924,6 +926,128 @@ app.listen(
         )
       }`
     );
+
+  }
+);
+
+
+// ==================================================
+// Vapi webhook
+//
+// Configure this route in Vapi as:
+// https://<your-ngrok-domain>/api/vapi/webhook
+// ==================================================
+
+app.post(
+  "/api/vapi/webhook",
+  (req, res) => {
+
+    const message =
+      req.body?.message;
+
+
+    if (!message?.type) {
+
+      return res
+        .status(400)
+        .json({
+          error: "Expected a Vapi server event."
+        });
+
+    }
+
+
+    // Vapi includes the complete, durable transcript in the end-of-call
+    // report. Transcript events during a call can be partial, so do not
+    // persist those as the final result.
+
+    if (message.type === "end-of-call-report") {
+
+      const callId =
+        message.call?.id;
+
+
+      if (!callId) {
+
+        return res
+          .status(400)
+          .json({
+            error: "Vapi end-of-call report did not include a call ID."
+          });
+
+      }
+
+
+      const claimNumber =
+        message.call?.metadata?.claimNumber ||
+        message.call?.assistantOverrides?.variableValues?.claimNumber ||
+        null;
+
+
+      const savedTranscript =
+        saveVapiCallTranscript({
+          callId,
+          claimNumber,
+          transcript:
+            message.artifact?.transcript,
+          messages:
+            message.artifact?.messages,
+          endedReason:
+            message.endedReason
+        });
+
+
+      console.log(
+        `Saved Vapi transcript for call ${callId}.`
+      );
+
+
+      return res.json({
+        ok: true,
+        callId:
+          savedTranscript.callId
+      });
+
+    }
+
+
+    // Other Vapi events (such as status and transcript updates) are
+    // informational for this app and only need acknowledgement.
+
+    res.json({
+      ok: true
+    });
+
+  }
+);
+
+
+// ==================================================
+// Retrieve a saved Vapi transcript
+// ==================================================
+
+app.get(
+  "/api/vapi/calls/:callId",
+  (req, res) => {
+
+    const transcript =
+      getVapiCallTranscript(
+        req.params.callId
+      );
+
+
+    if (!transcript) {
+
+      return res
+        .status(404)
+        .json({
+          error: "Vapi call transcript not found."
+        });
+
+    }
+
+
+    res.json(transcript);
 
   }
 );
