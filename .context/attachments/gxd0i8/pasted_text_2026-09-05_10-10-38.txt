@@ -1,0 +1,162 @@
+None selected 
+
+Skip to content
+Using Brown University Mail with screen readers
+jacky_chen@brown.edu 
+Enable desktop notifications for Brown University Mail.
+   OK  No thanks
+
+4 of 10
+DNHacks -- Read before meeting today
+
+Vaso, Andrea <andrea_vaso@brown.edu>
+Attachments
+Aug 21, 2026, 12:02 PM
+to Evangelos, Vikram, Jacky, Casey
+
+Hi guys,
+
+Sharing a plan I prepared ahead of our meeting. Here is what each of the files is:
+ENGINEERING_PLAN.md --> the most important file, scope + technical overview + rough task sharing (but that can change)
+IDEA.md --> the original idea, enhanced with "pitching" stuff like problems we solve, eventual business model, competitors, etc.
+HACKATHON.md --> description of MVP that's most feasible in a hackathon, also briefly described in ENGINEERING_PLAN.md
+Looking forward to it! Also Vikram please check the WhatsApp group once in a while lol
+
+Best,
+Andrea
+
+
+Brown logo	Andrea Vaso
+Undergraduate Class of 2029 
+
+A.B. Business Economics and Sc.B. Applied Math-Computer Science
+
+69 Brown Street, Mail #8138 Providence, RI, 02912
+(401) 548-4348 | www.linkedin.com/in/andrea-vaso
+
+ 
+ 3 Attachments
+  •  Scanned by Gmail
+jacky_chen@brown.edu. Press tab to insert.
+# Ghost Network Fraud Detection Platform
+
+## Problem
+
+Health insurance companies must maintain accurate provider directories — lists of in-network doctors and hospitals. These directories are routinely inflated with non-existent, retired, or unavailable providers. This is the "ghost network" problem.
+
+**Consequences:**
+- Members can't access care they were promised when they bought the plan
+- Insurers fraudulently inflate network adequacy metrics to claim public funding (Medicaid, Medicare Advantage)
+- CMS requires quarterly network adequacy audits; most state Medicaid agencies and managed care organizations lack automated tooling to run them
+
+The fraud is structural: insurers benefit from appearing to have broad networks, and the auditing infrastructure is too slow and manual to catch it at scale.
+
+## Solution
+
+An automated AI platform combining two layers:
+
+1. **Registry cross-reference engine** — ingests NPI registry, NPPES, state licensing boards, CMS participation files, and compares them algorithmically against insurer-submitted provider directories to flag high-probability ghost entries
+
+2. **AI voice verification agents** — outbound agents that simulate appointment booking calls (plan-specific, member-specific) to confirm provider availability and actual network participation, producing legally defensible verification records
+
+The two layers work in sequence: data cross-referencing triages the full directory down to high-risk entries; voice agents confirm the flagged cases. This keeps call volume manageable while maximizing accuracy.
+
+## Critical Technical Constraint
+
+Generic calls ("are you in network?") are not sufficient verification — receptionists don't reliably know, and network status is plan-specific. The verification standard that holds up to regulatory scrutiny requires simulating an actual appointment booking request for a **specific plan + member combination**. Voice agents must operate at this level of specificity, not generic inquiry. This is the core technical differentiator.
+
+## Target Markets
+
+### Phase 1 — Public Sector (Fraud Detection)
+
+| | |
+|---|---|
+| **Buyer** | State Medicaid agencies, CMS/OIG offices |
+| **Problem they have** | Mandated quarterly audits with no automated tooling; manual sampling misses systemic fraud |
+| **Value delivered** | Automated audit at scale → recoupment actions against fraudulent insurers → recovered public funds |
+| **Revenue model** | CMS Innovation grants, OIG grants, state contracts |
+| **Why start here** | Regulatory use generates published methodology and enforcement track record — the foundation for enterprise sales |
+
+### Phase 2 — Enterprise Compliance (Insurance Companies)
+
+| | |
+|---|---|
+| **Buyer** | Health insurers operating Medicare Advantage and Medicaid managed care plans |
+| **Framing** | "Survive the CMS audit before it happens" — not "find your fraud" |
+| **Problem they have** | Upcoming or ongoing CMS network adequacy audits, with clawback and penalty risk |
+| **Value delivered** | Identify and remediate directory gaps before enforcement; audit-ready reports on demand |
+| **Revenue model** | SaaS licensing, per-verification pricing |
+| **Why this framing works** | Insurers won't pay to surface their own liability; they will pay to reduce enforcement exposure |
+
+## Technical Architecture (High Level)
+
+```
+Public Registries          Insurer Directory
+(NPI, NPPES, CMS,    →    Submission
+ State Licensing)
+        ↓
+ Discrepancy Engine
+ (algorithmic flag)
+        ↓
+ AI Voice Agent Fleet
+ (appointment simulation,
+  plan + member specific)
+        ↓
+ Adjudication Layer
+ (confirmed / ghost /
+  unavailable / data quality)
+        ↓
+ Audit Report Generator
+ (CMS-compliant output,
+  evidence chain)
+```
+
+## Moat
+
+Not the scraping layer — that's commoditized (NPPES, NPI, CMS files are public). The defensible moat is:
+
+1. **Verification methodology** — appointment simulation at plan+member specificity
+2. **Regulatory acceptance** — methodology validated through public sector pilots and published CMS-aligned output format
+3. **Adjudication logic** — classification system that distinguishes fraud from data quality issues, with evidence chains that hold up to legal scrutiny
+
+## Go-to-Market Sequencing
+
+```
+Public sector pilots (CMS/Medicaid)
+        ↓
+Published methodology + enforcement track record
+        ↓
+Enterprise sales to insurers (defensive compliance)
+```
+
+The bridge from Phase 1 to Phase 2 is concrete: regulatory use generates the published methodology and case studies that give insurers confidence in the tool's regulatory defensibility. This is the asset that unlocks enterprise sales.
+
+## Key Gaps to Resolve (from Hackathon Session)
+
+| Gap | Issue | Implication |
+|---|---|---|
+| Verification standard | Must simulate appointment booking, not ask generic questions | Core agent design constraint |
+| Buyer targeting | CMS/Medicaid agencies > state insurance departments | Stronger enforcement power and budget |
+| Insurer framing | "Survive the audit" not "find your fraud" | Changes pitch, pricing, and product scope |
+| Moat definition | Verification methodology + regulatory acceptance, not scraping | Focus R&D investment correctly |
+
+## Hackathon Demo Targets
+
+- **Working demo**: AI voice agent calling a mock provider office with plan+member context, returning a structured verification result
+- **Dashboard**: Ghost network detection rate by geography and insurer, with confidence scores
+- **Sample audit report**: CMS-compliant output format showing evidence chain for verified and flagged entries
+- **Data layer**: Discrepancy detection against a sample NPI/NPPES snapshot vs. a synthetic insurer directory
+
+## Competitive Landscape
+
+| Competitor | What they do | Gap we fill |
+|---|---|---|
+| Manual auditing (status quo) | State auditors sample ~5% of directories | We audit 100% at quarterly cadence |
+| Symplr / Availity / CAQH | Directory data normalization and provider credentialing | Not focused on fraud detection or regulatory enforcement output |
+| General healthcare AI | Broad clinical and ops AI | No specialization in network adequacy fraud |
+
+---
+
+*Drafted in office-hours session — 2026-08-21. Branch: ghost-network-fraud-detection-ai.*
+IDEA.md
+Displaying ENGINEERING_PLAN.md. 
