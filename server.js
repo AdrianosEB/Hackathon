@@ -7,7 +7,8 @@ import {
   createClaim,
   getClaim,
   listClaims,
-  getDashboardStats
+  getDashboardStats,
+  saveClaimVerification
 } from "./db.js";
 
 // ---- verification layer ----
@@ -183,7 +184,7 @@ app.get("/api/claims/:id", (req, res) => {
 
   }
 
-  res.json(claim);
+  res.json(withRouting(claim));
 
 });
 
@@ -196,7 +197,7 @@ app.get("/api/dashboard", (req, res) => {
 
   res.json({
     stats: getDashboardStats(),
-    claims: listClaims(50),
+    claims: listClaims(50).map(withRouting),
     coverage: coverageReport()
   });
 
@@ -340,6 +341,11 @@ app.post("/api/claims/analyze", async (req, res) => {
 
   const savedClaim = createClaim(cleanClaim, analysis);
 
+  // Record the provider axis against the claim so the
+  // dashboard can show both axes, not just the claim's
+  // own numbers.
+  saveClaimVerification(savedClaim.id, verification);
+
   res.status(201).json({
     ...savedClaim,
     verification,
@@ -388,6 +394,100 @@ app.get("/api/outreach/:id", (req, res) => {
   res.json(item);
 
 });
+
+
+// -------------------------
+// Draft an approach, for demonstration
+//
+// The outreach ladder only fires when the provider
+// axis comes back unresolved, and on these fixtures
+// the identity panel usually resolves them — correctly.
+// So the queue is normally empty, and the parts worth
+// showing (the drafted call script, approval, dispatch,
+// the Vapi payload) never get exercised.
+//
+// This runs the REAL escalate() against a REAL registry
+// lookup, with one input stated rather than inferred:
+// that our own verification did not complete. That is
+// not a fabricated band — it is the documented
+// "registry outage on our side" path in
+// shouldEscalate(), and the queued row says so in its
+// reason column, so nobody reading the audit trail
+// later can mistake it for a finding about the
+// provider.
+//
+// Nothing else is simulated. The contact still comes
+// from NPPES, the cooldown still applies, approval is
+// still required, and dispatch is still a dry run.
+// -------------------------
+
+app.post("/api/outreach/demo-escalate", async (req, res) => {
+
+  const npi = String(req.body?.npi || "").replace(/\D/g, "");
+
+  if (npi.length !== 10) {
+    return res.status(400).json({ error: "Supply a 10-digit NPI." });
+  }
+
+  // The call window holds calls outside business hours
+  // and at weekends, which is correct and also makes the
+  // rest of the chain unreachable on a Saturday. Let the
+  // caller ask for a weekday clock explicitly.
+  const now = req.body?.assumeWeekday
+    ? nextWeekdayMorning()
+    : new Date();
+
+  try {
+
+    const result = await escalate(
+      {
+        npi,
+        providerName: String(req.body?.providerName || "").trim() || "(from registry)",
+        claimNumber: String(req.body?.claimNumber || "").trim() || null,
+        practiceWebsite: String(req.body?.practiceWebsite || "").trim(),
+        lineItems: []
+      },
+      {
+        dataConfidenceScore: null,
+        confidenceBand: "incomplete",
+        blocking: false,
+        blockingReason: null,
+        checks: [],
+        coverage: coverageReport(),
+        rationale:
+          "Demonstration: our own verification is treated as not having completed. This " +
+          "says nothing about the provider."
+      },
+      { now }
+    );
+
+    res.json(result);
+
+  } catch (error) {
+
+    res.status(400).json({ error: error.message });
+
+  }
+
+});
+
+
+function nextWeekdayMorning() {
+
+  const date = new Date();
+
+  // 18:00 UTC is mid-morning in every timezone the
+  // fixtures live in: 10:00 Pacific through 13:00
+  // Eastern, comfortably inside the 09:00-17:00 window.
+  date.setUTCHours(18, 0, 0, 0);
+
+  while (date.getUTCDay() === 0 || date.getUTCDay() === 6) {
+    date.setUTCDate(date.getUTCDate() + 1);
+  }
+
+  return date;
+
+}
 
 
 app.post("/api/outreach/:id/approve", (req, res) => {
@@ -468,6 +568,33 @@ app.post("/api/outreach/:id/outcome", (req, res) => {
   }
 
 });
+
+
+// -------------------------
+// Re-derive the routing decision for a stored claim
+//
+// triage() is a pure function of the two axes, so this
+// costs nothing and avoids storing a decision that
+// could drift out of step with the rule that produced
+// it. A claim analysed before the provider axis was
+// recorded simply has no routing.
+// -------------------------
+
+function withRouting(claim) {
+
+  if (!claim?.verification) {
+    return claim;
+  }
+
+  return {
+    ...claim,
+    routing: triage(
+      { reviewLevel: claim.reviewLevel, observations: claim.observations },
+      claim.verification
+    )
+  };
+
+}
 
 
 // -------------------------

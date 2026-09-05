@@ -1,358 +1,202 @@
 <!doctype html>
-
 <html lang="en">
 
 <head>
 
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  />
+  <title>Claim Integrity — two-axis review</title>
 
-  <title>
-    Claim Integrity — DNHacks
-  </title>
-
-  <link
-    rel="stylesheet"
-    href="/website/style.css"
-  />
+  <!-- Served from the repo root, not /website. -->
+  <link rel="stylesheet" href="/style.css" />
 
 </head>
-
 
 <body>
 
 
-  <!-- =============================================
-       HEADER
-  ============================================== -->
-
   <header class="topbar">
 
     <div>
-
-      <p class="eyebrow">
-        DNHACKS • CLAIM INTEGRITY
-      </p>
-
-      <h1>
-        AI-assisted billing anomaly detector
-      </h1>
-
+      <p class="eyebrow">DNHACKS • CLAIM INTEGRITY</p>
+      <h1>Two-axis claim review</h1>
       <p class="subhead">
-        Surface claims that deserve human review —
-        without labeling fraud.
+        How much of this claim's content needs a person to look at it, and how well does the
+        provider record match the federal registry? Separate questions, kept separate.
       </p>
-
     </div>
 
-
-    <button
-      id="demoBtn"
-      class="secondary"
-    >
-      Load demo claim
-    </button>
+    <div class="header-actions">
+      <button id="demoBtn" class="secondary">Load a demo claim</button>
+      <select id="demoPicker" class="demo-picker" aria-label="Demo scenario"></select>
+    </div>
 
   </header>
-
 
 
   <main>
 
 
-    <!-- =============================================
-         DASHBOARD STATISTICS
-    ============================================== -->
-
-    <section
-      class="stats"
-      id="stats"
-    >
+    <section class="stats" id="stats">
 
       <article>
-
-        <span>
-          Claims analyzed
-        </span>
-
-        <strong id="claimsAnalyzed">
-          0
-        </strong>
-
+        <span>Claims analysed</span>
+        <strong id="claimsAnalyzed">0</strong>
       </article>
 
-
       <article>
-
-        <span>
-          Claims flagged
-        </span>
-
-        <strong id="claimsFlagged">
-          0
-        </strong>
-
+        <span>Need a look</span>
+        <strong id="needsReview">0</strong>
       </article>
 
-
       <article>
-
-        <span>
-          Potential review $
-        </span>
-
-        <strong id="reviewAmount">
-          $0
-        </strong>
-
+        <span>Amount to review</span>
+        <strong id="reviewAmount">$0</strong>
       </article>
 
-
       <article>
-
-        <span>
-          Duplicate flags
-        </span>
-
-        <strong id="duplicateFlags">
-          0
-        </strong>
-
+        <span>Repeated line items</span>
+        <strong id="repeatedLines">0</strong>
       </article>
 
     </section>
 
 
+    <p class="coverage-note" id="coverageNote"></p>
 
-    <!-- =============================================
-         MAIN CLAIM ANALYSIS AREA
-    ============================================== -->
 
     <section class="grid">
 
 
-      <!-- ===========================================
-           CLAIM FORM
-      ============================================ -->
+      <!-- ===================== FORM ===================== -->
 
       <div class="panel form-panel">
 
-
         <div class="panel-title">
-
           <div>
-
-            <p class="eyebrow">
-              NEW ANALYSIS
-            </p>
-
-            <h2>
-              Analyze one claim
-            </h2>
-
+            <p class="eyebrow">NEW ANALYSIS</p>
+            <h2>Assess one claim</h2>
           </div>
-
-
-          <span class="pill">
-            Rules engine MVP
-          </span>
-
+          <span class="pill" id="modePill">deterministic + agents</span>
         </div>
-
 
 
         <form id="claimForm">
 
-
           <div class="two-col">
-
-
             <label>
-
               Claim number
-
-              <input
-                id="claimNumber"
-                required
-                placeholder="CLM-10429"
-              />
-
+              <input id="claimNumber" required placeholder="CLM-10429" />
             </label>
-
 
             <label>
-
-              Provider
-
-              <input
-                id="providerName"
-                required
-                placeholder="Northside Medical Center"
-              />
-
+              Billing provider
+              <input id="providerName" required placeholder="Riverbend Family Medicine" />
             </label>
-
-
           </div>
 
+
+          <fieldset class="identity">
+
+            <legend>
+              Provider identity
+              <span>checked against the federal registry</span>
+            </legend>
+
+            <div class="two-col">
+              <label>
+                NPI
+                <span>10 digits — without it the provider can only be guessed at by name</span>
+                <input id="npi" placeholder="9000000015" inputmode="numeric" />
+              </label>
+
+              <label>
+                Practice phone
+                <input id="practicePhone" placeholder="503-555-0118" />
+              </label>
+            </div>
+
+            <div class="three-col">
+              <label>
+                Practice address
+                <input id="practiceAddressLine1" placeholder="4120 SE Hawthorne Blvd" />
+              </label>
+
+              <label>
+                City
+                <input id="practiceCity" placeholder="Portland" />
+              </label>
+
+              <label>
+                State
+                <input id="practiceState" placeholder="OR" maxlength="2" />
+              </label>
+            </div>
+
+            <label>
+              Practice website
+              <span>used only to look for a published contact — never as evidence</span>
+              <input id="practiceWebsite" placeholder="http://localhost:3102/riverbend" />
+            </label>
+
+          </fieldset>
 
 
           <div class="two-col">
-
-
             <label>
-
               Patient label
-
-              <span>
-                (de-identified)
-              </span>
-
-              <input
-                id="patientLabel"
-                placeholder="Patient A"
-              />
-
+              <span>de-identified</span>
+              <input id="patientLabel" placeholder="Patient A" />
             </label>
-
 
             <label>
-
               Diagnosis codes
-
-              <span>
-                (comma separated)
-              </span>
-
-              <input
-                id="diagnosisCodes"
-                placeholder="R10.9, R11.0"
-              />
-
+              <span>comma separated</span>
+              <input id="diagnosisCodes" placeholder="R10.9, R11.0" />
             </label>
-
-
           </div>
-
 
 
           <label>
-
             Clinical note
-
-            <textarea
-              id="clinicalNote"
-              rows="4"
-              placeholder="Paste a de-identified clinical note..."
-            ></textarea>
-
+            <textarea id="clinicalNote" rows="3"
+              placeholder="Paste a de-identified clinical note..."></textarea>
           </label>
 
 
-
-          <!-- =======================================
-               CLAIM LINE ITEMS
-          ======================================== -->
-
           <div class="line-header">
-
-            <h3>
-              Claim line items
-            </h3>
-
-
-            <button
-              type="button"
-              id="addLineBtn"
-              class="text-btn"
-            >
-              + Add line
-            </button>
-
+            <h3>Claim line items</h3>
+            <button type="button" id="addLineBtn" class="text-btn">+ Add line</button>
           </div>
 
+          <div id="lineItems" class="line-items"></div>
 
-          <div
-            id="lineItems"
-            class="line-items"
-          ></div>
+          <div id="formError" class="error hidden"></div>
 
-
-
-          <div
-            id="formError"
-            class="error hidden"
-          ></div>
-
-
-
-          <button
-            class="primary"
-            type="submit"
-          >
-            Analyze claim →
-          </button>
-
+          <button class="primary" type="submit" id="submitBtn">Assess claim →</button>
 
         </form>
-
 
       </div>
 
 
+      <!-- ===================== RESULT ===================== -->
 
-      <!-- ===========================================
-           RESULT PANEL
-      ============================================ -->
+      <aside class="panel result-panel" id="resultPanel">
 
-      <aside
-        class="panel result-panel"
-        id="resultPanel"
-      >
+        <p class="eyebrow">LATEST ASSESSMENT</p>
 
-
-        <p class="eyebrow">
-          LATEST RESULT
-        </p>
-
-
-
-        <div
-          id="emptyResult"
-          class="empty"
-        >
-
-
-          <div class="empty-icon">
-            ◎
-          </div>
-
-
-          <h2>
-            No claim analyzed yet
-          </h2>
-
-
+        <div id="emptyResult" class="empty">
+          <div class="empty-icon">◎</div>
+          <h2>Nothing assessed yet</h2>
           <p>
-            Run an analysis to see evidence,
-            risk signals, and the amount
-            recommended for review.
+            Run an assessment to see both axes, the evidence behind each one, and where the
+            claim gets routed.
           </p>
-
-
         </div>
 
-
-
-        <div
-          id="resultContent"
-          class="hidden"
-        ></div>
-
+        <div id="resultContent" class="hidden"></div>
 
       </aside>
 
@@ -360,107 +204,87 @@
     </section>
 
 
+    <!-- ===================== OUTREACH ===================== -->
 
-    <!-- =============================================
-         LIVE CLAIM DASHBOARD
-    ============================================== -->
-
-    <section
-      class="panel dashboard-panel"
-    >
-
+    <section class="panel outreach-panel">
 
       <div class="panel-title">
-
-
         <div>
-
-          <p class="eyebrow">
-            LIVE DASHBOARD
-          </p>
-
-          <h2>
-            Recent claim analyses
-          </h2>
-
+          <p class="eyebrow">OUTREACH QUEUE</p>
+          <h2>Nothing sends itself</h2>
         </div>
 
-
-
-        <span class="live-dot">
-
-          <i></i>
-
-          updates automatically
-
-        </span>
-
-
+        <div class="token-box">
+          <input id="outreachToken" placeholder="operator token" value="tok_alice" />
+          <button id="loadOutreachBtn" class="text-btn" type="button">Load queue</button>
+        </div>
       </div>
 
+      <p class="muted small">
+        Every call and email is drafted and queued for a named person to approve. Dispatch is a
+        dry run unless an adapter is deliberately wired — it shows you the exact payload that
+        would have been sent.
+      </p>
 
+      <div class="demo-escalate">
+        <p class="muted small">
+          The ladder only fires when the provider record comes back unresolved, and on these
+          fixtures the identity panel usually resolves them — so the queue is normally empty.
+          To exercise the rest of the chain, draft an approach with our own verification
+          treated as not having completed. That is the documented
+          <em>registry outage on our side</em> path, and the queued row says so.
+        </p>
+
+        <div class="demo-escalate-row">
+          <input id="escalateNpi" placeholder="NPI" value="9000000023" />
+          <input id="escalateProvider" placeholder="Provider" value="Cascade Imaging Partners" />
+          <label class="inline-check">
+            <input type="checkbox" id="assumeWeekday" checked />
+            assume a weekday morning
+          </label>
+          <button id="escalateBtn" class="secondary" type="button">Draft an approach</button>
+        </div>
+
+        <div id="escalateResult" class="muted small"></div>
+      </div>
+
+      <div id="outreachList" class="outreach-list">
+        <p class="muted">Enter an operator token and load the queue.</p>
+      </div>
+
+    </section>
+
+
+    <!-- ===================== DASHBOARD ===================== -->
+
+    <section class="panel dashboard-panel">
+
+      <div class="panel-title">
+        <div>
+          <p class="eyebrow">LIVE DASHBOARD</p>
+          <h2>Recent assessments</h2>
+        </div>
+        <span class="live-dot"><i></i> updates automatically</span>
+      </div>
 
       <div class="table-wrap">
-
-
         <table>
-
-
           <thead>
-
             <tr>
-
-              <th>
-                Claim
-              </th>
-
-              <th>
-                Provider
-              </th>
-
-              <th>
-                Billed
-              </th>
-
-              <th>
-                Risk
-              </th>
-
-              <th>
-                Review $
-              </th>
-
-              <th>
-                Flags
-              </th>
-
+              <th>Claim</th>
+              <th>Provider</th>
+              <th>Billed</th>
+              <th>Claim axis</th>
+              <th>Provider axis</th>
+              <th>Routed to</th>
+              <th>Review $</th>
             </tr>
-
           </thead>
-
-
-
           <tbody id="claimsTable">
-
-            <tr>
-
-              <td
-                colspan="6"
-                class="muted"
-              >
-                No claims yet.
-              </td>
-
-            </tr>
-
+            <tr><td colspan="7" class="muted">No claims yet.</td></tr>
           </tbody>
-
-
         </table>
-
-
       </div>
-
 
     </section>
 
@@ -468,21 +292,14 @@
   </main>
 
 
-
   <footer>
-
-    Screening support only.
-
-    Flags indicate anomalies for human review,
-    not fraud or coverage determinations.
-
+    Screening support only. Observations indicate what a person should look at — not fraud,
+    and not a coverage determination. Provider bands describe the state of the evidence, never
+    the character of a provider.
   </footer>
 
 
-
-  <script src="/website/script.js"></script>
-
+  <script src="/script.js"></script>
 
 </body>
-
 </html>

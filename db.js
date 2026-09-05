@@ -139,6 +139,35 @@ export function createClaim(claim, analysis) {
 }
 
 
+// --------------------------------------------------
+// Record the provider axis against a claim
+//
+// migrateClaimsTable() adds these columns but nothing
+// wrote to them, so the dashboard could only ever show
+// one of the two axes. The whole point of the design is
+// that they stay separate and both get shown.
+// --------------------------------------------------
+
+export function saveClaimVerification(id, verification) {
+
+  db.prepare(`
+    UPDATE claims
+    SET data_confidence_score = ?,
+        confidence_band = ?,
+        verification = ?
+    WHERE id = ?
+  `).run(
+    verification?.dataConfidenceScore ?? null,
+    verification?.confidenceBand || "incomplete",
+    JSON.stringify(verification ?? null),
+    Number(id)
+  );
+
+  return getClaim(id);
+
+}
+
+
 export function getClaim(id) {
   return normalize(
     db.prepare("SELECT * FROM claims WHERE id = ?").get(id)
@@ -214,6 +243,12 @@ function normalize(row) {
     reviewLevel: row.review_level,
     observations: parse(row.observations, []),
     lineItems: parse(row.line_items, []),
+
+    // The provider axis, if it has been recorded.
+    // Deliberately a separate key: it never merges into
+    // the claim's own numbers.
+    verification: parse(row.verification, null),
+
     createdAt: row.created_at
   };
 
