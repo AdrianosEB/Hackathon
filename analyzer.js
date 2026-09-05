@@ -1,15 +1,6 @@
-// --------------------------------------------------
-// DEMO REFERENCE PRICES
-//
-// IMPORTANT:
-//
-// These are NOT authoritative reimbursement rates.
-//
-// They are temporary hackathon values so we can
-// demonstrate price-outlier detection.
-//
-// Eventually replace them with real reference data.
-// --------------------------------------------------
+// =============================================
+// Reference prices used by deterministic rules
+// =============================================
 
 const REFERENCE_PRICES = {
 
@@ -32,7 +23,10 @@ const REFERENCE_PRICES = {
 };
 
 
-// Some services we want to examine more carefully
+
+// =============================================
+// Higher-intensity procedure codes
+// =============================================
 
 const HIGH_INTENSITY_CODES =
   new Set([
@@ -41,323 +35,515 @@ const HIGH_INTENSITY_CODES =
   ]);
 
 
-// --------------------------------------------------
-// Main claim analysis function
-// --------------------------------------------------
 
-export function analyzeClaim(claim) {
+// =============================================
+// Main deterministic analyzer
+// =============================================
 
-  const flags = [];
+export function analyzeClaim(
+  claim
+) {
+
+  const flags =
+    [];
 
 
-  // Calculate total claim amount
+  let score =
+    0;
+
+
+
+  // =============================================
+  // Track UNIQUE claim lines under review.
+  //
+  // A line may trigger multiple findings, but its
+  // billed amount should only count once toward
+  // reviewAmount.
+  // =============================================
+
+  const reviewedLineIndexes =
+    new Set();
+
+
+
+  // =============================================
+  // Total billed amount
+  // =============================================
 
   const totalBilled =
+
     claim.lineItems.reduce(
+
       (total, item) =>
-        total + Number(item.amount || 0),
+
+        total +
+        Number(
+          item.amount || 0
+        ),
+
       0
+
     );
 
 
-  let score = 0;
 
-  let reviewAmount = 0;
+  // =============================================
+  // Rule 1:
+  // Duplicate procedure code on same date
+  // =============================================
 
-
-  // ==================================================
-  // RULE 1
-  //
-  // Duplicate procedure code on the same service date
-  // ==================================================
-
-  const seen = new Map();
+  const procedureDateMap =
+    new Map();
 
 
-  for (const item of claim.lineItems) {
+  claim.lineItems.forEach(
+    (item, index) => {
 
-    const key =
-      `${item.code}|${item.serviceDate || ""}`;
-
-
-    if (seen.has(key)) {
-
-      score += 28;
-
-      reviewAmount +=
-        Number(item.amount || 0);
+      const key =
+        `${item.code}|${item.serviceDate}`;
 
 
-      flags.push({
+      if (
+        !procedureDateMap.has(
+          key
+        )
+      ) {
 
-        type: "duplicate",
-
-        severity: "high",
-
-        lineCode: item.code,
-
-        message:
-          `Possible duplicate billing: ${item.code} appears more than once on ${item.serviceDate || "the same date"}.`,
-
-        evidence:
-          `Repeated line item with billed amount $${Number(item.amount || 0).toFixed(2)}.`
-
-      });
-
-    }
-
-
-    seen.set(key, true);
-
-  }
-
-
-  // ==================================================
-  // RULE 2
-  //
-  // Unusually high quantity / units
-  // ==================================================
-
-  for (const item of claim.lineItems) {
-
-    const units =
-      Number(item.units || 1);
-
-
-    if (units >= 5) {
-
-      score +=
-        Math.min(
-          18,
-          units * 2
+        procedureDateMap.set(
+          key,
+          []
         );
 
-
-      reviewAmount +=
-        Number(item.amount || 0) * 0.4;
+      }
 
 
-      flags.push({
-
-        type: "quantity",
-
-        severity:
-          units >= 10
-            ? "high"
-            : "medium",
-
-        lineCode:
-          item.code,
-
-        message:
-          `Unusually high unit count (${units}) for code ${item.code}.`,
-
-        evidence:
-          "High quantities can be valid, but this line deserves manual validation."
-
-      });
+      procedureDateMap
+        .get(key)
+        .push({
+          item,
+          index
+        });
 
     }
-
-  }
-
-
-  // ==================================================
-  // RULE 3
-  //
-  // Price outlier
-  // ==================================================
-
-  for (const item of claim.lineItems) {
-
-    const referencePrice =
-      REFERENCE_PRICES[item.code];
+  );
 
 
-    const amount =
-      Number(item.amount || 0);
 
-
-    // Only evaluate codes for which we currently
-    // have a demo reference price.
-
-    if (
-      referencePrice &&
-      amount > referencePrice * 2.5
-    ) {
-
-      const excessAmount =
-        Math.max(
-          0,
-          amount - referencePrice
-        );
-
-
-      score +=
-        amount > referencePrice * 5
-          ? 25
-          : 16;
-
-
-      reviewAmount +=
-        excessAmount;
-
-
-      flags.push({
-
-        type: "price_outlier",
-
-        severity:
-          amount > referencePrice * 5
-            ? "high"
-            : "medium",
-
-        lineCode:
-          item.code,
-
-        message:
-          `Billed amount for ${item.code} is far above this demo's reference value.`,
-
-        evidence:
-          `$${amount.toFixed(2)} billed vs. $${referencePrice.toFixed(2)} demo reference.`
-
-      });
-
-    }
-
-  }
-
-
-  // ==================================================
-  // RULE 4
-  //
-  // Limited clinical documentation
-  //
-  // This does NOT determine medical necessity.
-  //
-  // It simply identifies situations where a
-  // high-intensity service has very little
-  // accompanying documentation.
-  // ==================================================
-
-  const noteLength =
-    (claim.clinicalNote || "")
-      .trim()
-      .length;
-
-
-  for (const item of claim.lineItems) {
-
-    if (
-      HIGH_INTENSITY_CODES.has(item.code) &&
-      noteLength > 0 &&
-      noteLength < 90
-    ) {
-
-      score += 18;
-
-
-      reviewAmount +=
-        Number(item.amount || 0) * 0.5;
-
-
-      flags.push({
-
-        type: "documentation",
-
-        severity: "medium",
-
-        lineCode:
-          item.code,
-
-        message:
-          `Documentation may be too limited to clearly support higher-intensity code ${item.code}.`,
-
-        evidence:
-          `Clinical note is only ${noteLength} characters long. This is a screening signal, not a coverage determination.`
-
-      });
-
-    }
-
-  }
-
-
-  // ==================================================
-  // RULE 5
-  //
-  // Missing diagnosis information
-  // ==================================================
-
-  if (
-    !claim.diagnosisCodes ||
-    claim.diagnosisCodes.length === 0
+  for (
+    const entries
+    of procedureDateMap.values()
   ) {
 
-    score += 12;
+    if (
+      entries.length > 1
+    ) {
+
+      const first =
+        entries[0].item;
+
+
+      score +=
+        28;
+
+
+
+      // -----------------------------------------
+      // Only the extra duplicate entries are
+      // considered duplicate dollars.
+      //
+      // Mark those lines for review.
+      // -----------------------------------------
+
+      entries
+        .slice(1)
+        .forEach(
+          (entry) => {
+
+            reviewedLineIndexes.add(
+              entry.index
+            );
+
+          }
+        );
+
+
+      flags.push({
+
+        type:
+          "duplicate",
+
+        severity:
+          "high",
+
+        lineCode:
+          first.code,
+
+        message:
+          `Procedure ${first.code} appears more than once on the same service date.`,
+
+        evidence:
+          `${entries.length} entries for procedure ${first.code} were billed on ${first.serviceDate}.`,
+
+        detectedBy:
+          ["rules"]
+
+      });
+
+    }
+
+  }
+
+
+
+  // =============================================
+  // Rule 2:
+  // Unusually high units
+  // =============================================
+
+  claim.lineItems.forEach(
+    (item, index) => {
+
+      const units =
+        Number(
+          item.units || 1
+        );
+
+
+      if (
+        units >= 5
+      ) {
+
+        score +=
+          22;
+
+
+        reviewedLineIndexes.add(
+          index
+        );
+
+
+        flags.push({
+
+          type:
+            "quantity",
+
+          severity:
+            "medium",
+
+          lineCode:
+            item.code,
+
+          message:
+            `Procedure ${item.code} has an unusually high unit count.`,
+
+          evidence:
+            `${units} units were billed for procedure ${item.code}.`,
+
+          detectedBy:
+            ["rules"]
+
+        });
+
+      }
+
+    }
+  );
+
+
+
+  // =============================================
+  // Rule 3:
+  // Price outlier
+  // More than 2.5× reference price
+  // =============================================
+
+  claim.lineItems.forEach(
+    (item, index) => {
+
+      const referencePrice =
+        REFERENCE_PRICES[
+          item.code
+        ];
+
+
+      if (
+        !referencePrice
+      ) {
+
+        return;
+
+      }
+
+
+      const billedAmount =
+        Number(
+          item.amount || 0
+        );
+
+
+      const ratio =
+        billedAmount /
+        referencePrice;
+
+
+      if (
+        ratio > 2.5
+      ) {
+
+        score +=
+          25;
+
+
+        reviewedLineIndexes.add(
+          index
+        );
+
+
+        flags.push({
+
+          type:
+            "price_outlier",
+
+          severity:
+            "medium",
+
+          lineCode:
+            item.code,
+
+          message:
+            `Procedure ${item.code} is billed well above the reference amount.`,
+
+          evidence:
+            `Billed amount is $${billedAmount.toFixed(
+              2
+            )} compared with a reference amount of $${referencePrice.toFixed(
+              2
+            )}.`,
+
+          detectedBy:
+            ["rules"]
+
+        });
+
+      }
+
+    }
+  );
+
+
+
+  // =============================================
+  // Rule 4:
+  // Limited documentation for higher-intensity
+  // procedures
+  // =============================================
+
+  const clinicalNote =
+
+    String(
+      claim.clinicalNote || ""
+    )
+      .trim();
+
+
+  claim.lineItems.forEach(
+    (item, index) => {
+
+      if (
+        HIGH_INTENSITY_CODES.has(
+          item.code
+        ) &&
+        clinicalNote.length > 0 &&
+        clinicalNote.length < 90
+      ) {
+
+        score +=
+          18;
+
+
+        reviewedLineIndexes.add(
+          index
+        );
+
+
+        flags.push({
+
+          type:
+            "documentation",
+
+          severity:
+            "medium",
+
+          lineCode:
+            item.code,
+
+          message:
+            `Documentation may be limited for higher-intensity procedure ${item.code}.`,
+
+          evidence:
+            `The supplied clinical note is ${clinicalNote.length} characters long.`,
+
+          detectedBy:
+            ["rules"]
+
+        });
+
+      }
+
+    }
+  );
+
+
+
+  // =============================================
+  // Rule 5:
+  // Missing diagnosis context
+  //
+  // This is a claim-level finding, not tied to
+  // one specific billed line, so it does not add
+  // anything to reviewAmount.
+  // =============================================
+
+  const diagnosisCodes =
+
+    Array.isArray(
+      claim.diagnosisCodes
+    )
+
+      ? claim.diagnosisCodes
+
+      : [];
+
+
+  if (
+    diagnosisCodes.length === 0
+  ) {
+
+    score +=
+      15;
 
 
     flags.push({
 
-      type: "missing_context",
+      type:
+        "missing_context",
 
-      severity: "medium",
+      severity:
+        "medium",
+
+      lineCode:
+        null,
 
       message:
-        "No diagnosis code was supplied with the claim.",
+        "Diagnosis context is missing.",
 
       evidence:
-        "Diagnosis context is needed for procedure-to-diagnosis validation."
+        "No diagnosis codes were supplied with the claim.",
+
+      detectedBy:
+        ["rules"]
 
     });
 
   }
 
 
-  // ==================================================
-  // Final score
-  // ==================================================
+
+  // =============================================
+  // Calculate UNIQUE review amount
+  //
+  // Each flagged line contributes its amount only
+  // once, even if it has several findings.
+  // =============================================
+
+  const reviewAmount =
+
+    [...reviewedLineIndexes]
+      .reduce(
+
+        (total, index) => {
+
+          const item =
+            claim.lineItems[
+              index
+            ];
+
+
+          return (
+            total +
+            Number(
+              item?.amount || 0
+            )
+          );
+
+        },
+
+        0
+
+      );
+
+
+
+  // =============================================
+  // Prevent score from exceeding 100
+  // =============================================
 
   score =
     Math.min(
-      100,
-      Math.round(score)
+      score,
+      100
     );
 
 
-  // Never let our estimated review amount exceed
-  // the entire claim amount.
 
-  reviewAmount =
-    Math.min(
-      totalBilled,
-      Math.round(
-        reviewAmount * 100
-      ) / 100
+  // =============================================
+  // Overall deterministic risk level
+  //
+  // Highest deterministic finding wins.
+  // =============================================
+
+  const hasHighFinding =
+
+    flags.some(
+      (flag) =>
+        flag.severity ===
+        "high"
     );
 
 
-  // Convert numeric score to label
+  const hasMediumFinding =
 
-  let riskLevel = "low";
+    flags.some(
+      (flag) =>
+        flag.severity ===
+        "medium"
+    );
 
 
-  if (score >= 60) {
+  const riskLevel =
 
-    riskLevel = "high";
+    hasHighFinding
 
-  } else if (score >= 25) {
+      ? "high"
 
-    riskLevel = "review";
+      : hasMediumFinding
 
-  }
+        ? "review"
 
+        : "low";
+
+
+
+  // =============================================
+  // Return deterministic analysis
+  // =============================================
 
   return {
 
     totalBilled,
 
-    riskScore: score,
+    riskScore:
+      score,
 
     reviewAmount,
 

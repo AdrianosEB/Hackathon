@@ -1,0 +1,1583 @@
+:root {
+
+  --bg:
+    #0b0d10;
+
+  --panel:
+    #12161b;
+
+  --panel-hover:
+    #171c22;
+
+  --input:
+    #0d1115;
+
+  --text:
+    #f4f7fb;
+
+  --muted:
+    #929ca8;
+
+  --line:
+    #27303a;
+
+  --green:
+    #9ef2bf;
+
+  --yellow:
+    #ffd98a;
+
+  --red:
+    #ff9d9d;
+
+  --blue:
+    #9cc8ff;
+
+}
+
+
+
+/* =============================================
+   RESET
+============================================= */
+
+* {
+
+  box-sizing:
+    border-box;
+
+}
+
+
+
+html {
+
+  height:
+    100%;
+
+}
+
+
+
+body {
+
+  min-height:
+    100%;
+
+  margin:
+    0;
+
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  background:
+    var(--bg);
+
+  color:
+    var(--text);
+
+}
+
+
+
+/* =============================================
+   HEADER
+============================================= */
+
+.topbar {
+
+  min-height:
+    64px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    16px;
+
+  padding:
+    10px 22px;
+
+  border-bottom:
+    1px solid var(--line);
+
+  background:
+    #0d1014;
+
+}
+
+
+
+.brand {
+
+  font-size:
+    17px;
+
+  font-weight:
+    750;
+
+  letter-spacing:
+    -0.02em;
+
+}
+
+
+
+/* =============================================
+   DEMO TEST CONTROLS
+============================================= */
+
+.demo-controls {
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    8px;
+
+}
+
+
+
+.demo-controls select {
+
+  width:
+    auto;
+
+  min-width:
+    170px;
+
+  background:
+    var(--input);
+
+  color:
+    var(--text);
+
+  border:
+    1px solid var(--line);
+
+  border-radius:
+    8px;
+
+  padding:
+    9px 10px;
+
+  outline:
+    none;
+
+  font:
+    inherit;
+
+}
+
+
+
+.demo-controls select:focus {
+
+  border-color:
+    #55708f;
+
+}
+
+
+
+/* =============================================
+   MAIN LAYOUT
+============================================= */
+
+.app-shell {
+
+  min-height:
+    calc(100vh - 64px);
+
+  display:
+    grid;
+
+  grid-template-columns:
+    390px minmax(0, 1fr);
+
+}
+
+
+
+/* =============================================
+   PAST CLAIMS SIDEBAR
+============================================= */
+
+.claims-sidebar {
+
+  min-width:
+    0;
+
+  border-right:
+    1px solid var(--line);
+
+  background:
+    #0d1014;
+
+}
+
+
+
+.sidebar-header {
+
+  height:
+    58px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  padding:
+    0 18px;
+
+  border-bottom:
+    1px solid var(--line);
+
+}
+
+
+
+.sidebar-header h2 {
+
+  margin:
+    0;
+
+  font-size:
+    14px;
+
+  font-weight:
+    700;
+
+}
+
+
+
+/* =============================================
+   PAST CLAIMS TABLE
+============================================= */
+
+.table-wrap {
+
+  width:
+    100%;
+
+  overflow:
+    auto;
+
+}
+
+
+
+table {
+
+  width:
+    100%;
+
+  border-collapse:
+    collapse;
+
+}
+
+
+
+th {
+
+  position:
+    sticky;
+
+  top:
+    0;
+
+  z-index:
+    2;
+
+  background:
+    #0d1014;
+
+  color:
+    var(--muted);
+
+  font-size:
+    10px;
+
+  font-weight:
+    700;
+
+  text-align:
+    left;
+
+  text-transform:
+    uppercase;
+
+  letter-spacing:
+    0.06em;
+
+  padding:
+    11px 12px;
+
+  border-bottom:
+    1px solid var(--line);
+
+}
+
+
+
+td {
+
+  padding:
+    13px 12px;
+
+  font-size:
+    12px;
+
+  border-bottom:
+    1px solid #1e252c;
+
+  vertical-align:
+    middle;
+
+}
+
+
+
+#claimsTable tr[data-id] {
+
+  transition:
+    background 120ms ease;
+
+}
+
+
+
+#claimsTable tr[data-id]:hover {
+
+  background:
+    var(--panel-hover);
+
+}
+
+
+
+#claimsTable strong {
+
+  font-size:
+    12px;
+
+}
+
+
+
+/* =============================================
+   WORKSPACE
+============================================= */
+
+.workspace {
+
+  min-width:
+    0;
+
+  padding:
+    18px;
+
+  display:
+    grid;
+
+  gap:
+    16px;
+
+  align-content:
+    start;
+
+}
+
+
+
+/* =============================================
+   PANELS
+============================================= */
+
+.panel {
+
+  width:
+    100%;
+
+  border:
+    1px solid var(--line);
+
+  border-radius:
+    12px;
+
+  background:
+    var(--panel);
+
+  padding:
+    20px;
+
+}
+
+
+
+.section-header {
+
+  margin-bottom:
+    18px;
+
+}
+
+
+
+.section-header h2 {
+
+  margin:
+    0;
+
+  font-size:
+    16px;
+
+  letter-spacing:
+    -0.01em;
+
+}
+
+
+
+/* =============================================
+   FORM
+============================================= */
+
+form {
+
+  display:
+    grid;
+
+  gap:
+    14px;
+
+}
+
+
+
+.two-col {
+
+  display:
+    grid;
+
+  grid-template-columns:
+    1fr 1fr;
+
+  gap:
+    12px;
+
+}
+
+
+
+label {
+
+  display:
+    grid;
+
+  gap:
+    7px;
+
+  color:
+    #cbd4df;
+
+  font-size:
+    11px;
+
+  font-weight:
+    650;
+
+}
+
+
+
+input,
+textarea {
+
+  width:
+    100%;
+
+  border:
+    1px solid var(--line);
+
+  background:
+    var(--input);
+
+  color:
+    var(--text);
+
+  border-radius:
+    8px;
+
+  padding:
+    11px 12px;
+
+  outline:
+    none;
+
+  font:
+    inherit;
+
+}
+
+
+
+input:focus,
+textarea:focus {
+
+  border-color:
+    #55708f;
+
+}
+
+
+
+textarea {
+
+  resize:
+    vertical;
+
+}
+
+
+
+/* =============================================
+   CLAIM LINE ITEMS
+============================================= */
+
+.line-header {
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  margin-top:
+    4px;
+
+}
+
+
+
+.line-header h3 {
+
+  margin:
+    0;
+
+  font-size:
+    12px;
+
+}
+
+
+
+.line-items {
+
+  display:
+    grid;
+
+  gap:
+    8px;
+
+}
+
+
+
+.line-item {
+
+  display:
+    grid;
+
+  grid-template-columns:
+    0.8fr
+    1.35fr
+    1fr
+    0.55fr
+    0.75fr
+    auto;
+
+  gap:
+    7px;
+
+  align-items:
+    end;
+
+  padding:
+    10px;
+
+  border:
+    1px solid var(--line);
+
+  border-radius:
+    9px;
+
+  background:
+    var(--input);
+
+}
+
+
+
+.line-item label {
+
+  font-size:
+    9px;
+
+}
+
+
+
+.line-item input {
+
+  padding:
+    8px;
+
+  font-size:
+    11px;
+
+}
+
+
+
+/* =============================================
+   BUTTONS
+============================================= */
+
+button {
+
+  border:
+    0;
+
+  border-radius:
+    8px;
+
+  font:
+    inherit;
+
+  font-weight:
+    700;
+
+  cursor:
+    pointer;
+
+}
+
+
+
+button:hover {
+
+  opacity:
+    0.9;
+
+}
+
+
+
+.primary {
+
+  justify-self:
+    start;
+
+  background:
+    var(--text);
+
+  color:
+    #0b0d10;
+
+  padding:
+    11px 16px;
+
+}
+
+
+
+.secondary {
+
+  background:
+    #181e25;
+
+  color:
+    var(--text);
+
+  border:
+    1px solid var(--line);
+
+  padding:
+    9px 12px;
+
+}
+
+
+
+.text-btn {
+
+  padding:
+    4px;
+
+  background:
+    transparent;
+
+  color:
+    var(--blue);
+
+}
+
+
+
+.remove-btn {
+
+  padding:
+    8px;
+
+  background:
+    transparent;
+
+  color:
+    var(--red);
+
+}
+
+
+
+/* =============================================
+   RESULT
+============================================= */
+
+.result-panel {
+
+  min-height:
+    120px;
+
+}
+
+
+
+.empty {
+
+  color:
+    var(--muted);
+
+  font-size:
+    12px;
+
+  padding:
+    4px 0;
+
+}
+
+
+
+.claim-result-header {
+
+  display:
+    flex;
+
+  align-items:
+    start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    16px;
+
+  padding-bottom:
+    14px;
+
+  border-bottom:
+    1px solid var(--line);
+
+}
+
+
+
+.claim-result-header h2 {
+
+  margin:
+    0 0 5px;
+
+  font-size:
+    18px;
+
+}
+
+
+
+.claim-result-header p {
+
+  margin:
+    0;
+
+}
+
+
+
+/* =============================================
+   CLAIM METADATA
+============================================= */
+
+.claim-meta {
+
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0, 1fr)
+    );
+
+  gap:
+    8px;
+
+  margin:
+    14px 0;
+
+}
+
+
+
+.claim-meta div {
+
+  padding:
+    10px;
+
+  border:
+    1px solid var(--line);
+
+  border-radius:
+    8px;
+
+  background:
+    var(--input);
+
+}
+
+
+
+.claim-meta span {
+
+  display:
+    block;
+
+  color:
+    var(--muted);
+
+  font-size:
+    9px;
+
+  text-transform:
+    uppercase;
+
+  letter-spacing:
+    0.05em;
+
+  margin-bottom:
+    5px;
+
+}
+
+
+
+.claim-meta strong {
+
+  font-size:
+    12px;
+
+}
+
+
+
+/* =============================================
+   RESULT SECTIONS
+============================================= */
+
+.result-section {
+
+  margin-top:
+    18px;
+
+}
+
+
+
+.result-section h3 {
+
+  margin:
+    0 0 9px;
+
+  font-size:
+    12px;
+
+}
+
+
+
+/* =============================================
+   PROCEDURES
+============================================= */
+
+.procedure-list {
+
+  display:
+    grid;
+
+  gap:
+    6px;
+
+}
+
+
+
+.procedure-row {
+
+  display:
+    grid;
+
+  grid-template-columns:
+    80px
+    1fr
+    80px
+    90px;
+
+  gap:
+    10px;
+
+  padding:
+    9px 10px;
+
+  border:
+    1px solid var(--line);
+
+  border-radius:
+    8px;
+
+  background:
+    var(--input);
+
+  font-size:
+    11px;
+
+}
+
+
+
+.procedure-amount {
+
+  text-align:
+    right;
+
+}
+
+
+
+/* =============================================
+   FINDINGS
+============================================= */
+
+.flags {
+
+  display:
+    grid;
+
+  gap:
+    8px;
+
+}
+
+
+
+.flag {
+
+  padding:
+    11px;
+
+  border:
+    1px solid var(--line);
+
+  border-radius:
+    8px;
+
+  background:
+    var(--input);
+
+}
+
+
+
+.finding-header {
+
+  display:
+    flex;
+
+  align-items:
+    start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    12px;
+
+}
+
+
+
+.finding-header strong {
+
+  font-size:
+    12px;
+
+}
+
+
+
+.flag p {
+
+  margin:
+    7px 0 0;
+
+  color:
+    var(--muted);
+
+  font-size:
+    11px;
+
+  line-height:
+    1.45;
+
+}
+
+
+
+.finding-code {
+
+  color:
+    var(--muted);
+
+  font-size:
+    10px;
+
+  margin-top:
+    5px;
+
+}
+
+
+
+/* =============================================
+   ANALYSIS SOURCE LABELS
+============================================= */
+
+.analysis-sources {
+
+  display:
+    flex;
+
+  gap:
+    5px;
+
+  margin-top:
+    7px;
+
+}
+
+
+
+.analysis-source {
+
+  padding:
+    3px 6px;
+
+  border:
+    1px solid var(--line);
+
+  border-radius:
+    5px;
+
+  font-size:
+    8px;
+
+  font-weight:
+    800;
+
+}
+
+
+
+.rules-source {
+
+  color:
+    var(--blue);
+
+}
+
+
+
+.ai-source {
+
+  color:
+    var(--green);
+
+}
+
+
+
+/* =============================================
+   AI REVIEW
+============================================= */
+
+.ai-review {
+
+  margin-top:
+    9px;
+
+  padding-top:
+    9px;
+
+  border-top:
+    1px solid var(--line);
+
+}
+
+
+
+.ai-review-title {
+
+  color:
+    var(--muted);
+
+  font-size:
+    9px;
+
+  font-weight:
+    750;
+
+}
+
+
+
+.ai-evidence {
+
+  margin-top:
+    6px;
+
+  color:
+    var(--muted);
+
+  font-size:
+    10px;
+
+}
+
+
+
+.ai-reason {
+
+  display:
+    inline-block;
+
+  margin-top:
+    7px;
+
+  color:
+    var(--muted);
+
+  font-size:
+    9px;
+
+}
+
+
+
+/* =============================================
+   RISK BADGES
+============================================= */
+
+.risk-badge {
+
+  display:
+    inline-block;
+
+  border-radius:
+    999px;
+
+  padding:
+    5px 8px;
+
+  font-size:
+    9px;
+
+  font-weight:
+    800;
+
+  text-transform:
+    uppercase;
+
+  white-space:
+    nowrap;
+
+}
+
+
+
+.risk-low {
+
+  color:
+    var(--green);
+
+  background:
+    #11251a;
+
+}
+
+
+
+.risk-review {
+
+  color:
+    var(--yellow);
+
+  background:
+    #2a2213;
+
+}
+
+
+
+.risk-high {
+
+  color:
+    var(--red);
+
+  background:
+    #2b1515;
+
+}
+
+
+
+/* =============================================
+   VAPI CLARIFICATION
+============================================= */
+
+.clarification-call {
+
+  margin-top:
+    18px;
+
+  padding-top:
+    16px;
+
+  border-top:
+    1px solid var(--line);
+
+}
+
+
+
+.clarification-call h3 {
+
+  margin:
+    0 0 10px;
+
+  font-size:
+    12px;
+
+}
+
+
+
+.call-complete {
+
+  color:
+    var(--green);
+
+  font-size:
+    11px;
+
+  font-weight:
+    700;
+
+}
+
+
+
+.call-in-progress {
+
+  font-size:
+    11px;
+
+}
+
+
+
+.call-details {
+
+  font-size:
+    11px;
+
+}
+
+
+
+.call-details p {
+
+  margin:
+    7px 0;
+
+}
+
+
+
+.transcript-section {
+
+  margin-top:
+    12px;
+
+}
+
+
+
+.transcript-section h4 {
+
+  margin:
+    0 0 8px;
+
+  font-size:
+    11px;
+
+}
+
+
+
+.transcript {
+
+  white-space:
+    pre-wrap;
+
+  padding:
+    12px;
+
+  background:
+    var(--input);
+
+  border:
+    1px solid var(--line);
+
+  border-radius:
+    8px;
+
+  color:
+    #d6dde6;
+
+  font-size:
+    11px;
+
+  line-height:
+    1.55;
+
+}
+
+
+
+/* =============================================
+   GENERAL
+============================================= */
+
+.muted {
+
+  color:
+    var(--muted);
+
+}
+
+
+
+.hidden {
+
+  display:
+    none !important;
+
+}
+
+
+
+.error {
+
+  color:
+    #ffb9b9;
+
+  background:
+    #2b1515;
+
+  border:
+    1px solid #5a2929;
+
+  padding:
+    9px 11px;
+
+  border-radius:
+    8px;
+
+  font-size:
+    11px;
+
+}
+
+
+
+/* =============================================
+   TABLET
+============================================= */
+
+@media (
+  max-width: 950px
+) {
+
+  .app-shell {
+
+    grid-template-columns:
+      1fr;
+
+  }
+
+
+  .claims-sidebar {
+
+    border-right:
+      0;
+
+    border-bottom:
+      1px solid var(--line);
+
+    max-height:
+      300px;
+
+  }
+
+
+  .claim-meta {
+
+    grid-template-columns:
+      1fr 1fr;
+
+  }
+
+}
+
+
+
+/* =============================================
+   MOBILE
+============================================= */
+
+@media (
+  max-width: 650px
+) {
+
+  .topbar {
+
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+
+    padding:
+      14px;
+
+  }
+
+
+  .demo-controls {
+
+    width:
+      100%;
+
+  }
+
+
+  .demo-controls select {
+
+    flex:
+      1;
+
+    min-width:
+      0;
+
+  }
+
+
+  .workspace {
+
+    padding:
+      10px;
+
+  }
+
+
+  .panel {
+
+    padding:
+      14px;
+
+  }
+
+
+  .two-col {
+
+    grid-template-columns:
+      1fr;
+
+  }
+
+
+  .line-item {
+
+    grid-template-columns:
+      1fr 1fr;
+
+  }
+
+
+  .procedure-row {
+
+    grid-template-columns:
+      70px 1fr;
+
+  }
+
+
+  .claim-meta {
+
+    grid-template-columns:
+      1fr 1fr;
+
+  }
+
+}

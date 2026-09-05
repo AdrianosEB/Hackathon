@@ -1,8 +1,6 @@
-node_modules/
 .env
+node_modules/
 
-claim-integrity.db
-claim-integrity.db-shm
-claim-integrity.db-wal
-
-.DS_Store
+*.db
+*.db-shm
+*.db-wal
