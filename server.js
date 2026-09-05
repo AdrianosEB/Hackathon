@@ -48,9 +48,52 @@ app.use(
 
 
 // Serve frontend
+//
+// The application assets live at the repository root. Serve only the public
+// files explicitly so source files and local configuration are not exposed.
 
-app.use(
-  express.static("website")
+app.get(
+  "/",
+  (_req, res) => {
+
+    res.sendFile(
+      "index.html",
+      {
+        root: process.cwd()
+      }
+    );
+
+  }
+);
+
+
+app.get(
+  "/style.css",
+  (_req, res) => {
+
+    res.sendFile(
+      "style.css",
+      {
+        root: process.cwd()
+      }
+    );
+
+  }
+);
+
+
+app.get(
+  "/script.js",
+  (_req, res) => {
+
+    res.sendFile(
+      "script.js",
+      {
+        root: process.cwd()
+      }
+    );
+
+  }
 );
 
 
