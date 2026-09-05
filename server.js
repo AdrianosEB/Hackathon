@@ -1,175 +1,529 @@
 import "dotenv/config";
+
 import express from "express";
 
-import { reviewClaimWithAI } from "./ai-reviewer.js";
-import { analyzeClaim } from "./analyzer.js";
-import { triggerVapiClarification } from "./vapi.js";
+import {
+  analyzeClaim
+} from "./analyzer.js";
+
+import {
+  reviewClaimWithAI
+} from "./ai-reviewer.js";
+
+import {
+  triggerVapiClarification
+} from "./vapi.js";
 
 import {
   createClaim,
   getClaim,
   listClaims,
   getDashboardStats,
-  getVapiCallTranscript,
-  saveVapiCallTranscript
+  createVapiCall,
+  updateVapiCallStatus,
+  completeVapiCall,
+  getVapiCallsForClaim
 } from "./db.js";
 
 
-// ==================================================
-// App setup
-// ==================================================
 
-const app = express();
+// =============================================
+// Express setup
+// =============================================
 
-const PORT = Number(
-  process.env.PORT || 3000
+const app =
+  express();
+
+
+const PORT =
+  process.env.PORT ||
+  3000;
+
+
+app.use(
+  express.json({
+    limit: "1mb"
+  })
 );
 
 
-// ==================================================
-// Hackathon safeguard
-//
-// Prevent the same claim number from automatically
-// triggering multiple Vapi calls during this server
-// session.
-// ==================================================
+app.use(
+  express.static(
+    "website"
+  )
+);
+
+
+
+// =============================================
+// Prevent duplicate calls during one server run
+// =============================================
 
 const autoCalledClaims =
   new Set();
 
 
-// ==================================================
-// Middleware
-// ==================================================
 
-app.use(
-  express.json({
-    limit: "5mb"
-  })
-);
+// =============================================
+// Severity ranking
+// =============================================
+
+const SEVERITY_RANK = {
+
+  low:
+    1,
+
+  medium:
+    2,
+
+  high:
+    3
+
+};
 
 
-// Serve frontend
+
+// =============================================
+// Convert findings into an overall rating
 //
-// The application assets live at the repository root. Serve only the public
-// files explicitly so source files and local configuration are not exposed.
+// HIGH finding   -> high
+// MEDIUM finding -> review
+// otherwise      -> low
+// =============================================
 
-app.get(
-  "/",
-  (_req, res) => {
+function deriveRiskLevelFromFlags(
+  flags = []
+) {
 
-    res.sendFile(
-      "index.html",
-      {
-        root: process.cwd()
-      }
+  if (
+    flags.some(
+      (flag) =>
+        flag.severity === "high"
+    )
+  ) {
+
+    return "high";
+
+  }
+
+
+  if (
+    flags.some(
+      (flag) =>
+        flag.severity === "medium"
+    )
+  ) {
+
+    return "review";
+
+  }
+
+
+  return "low";
+
+}
+
+
+
+// =============================================
+// Normalize claim input
+// =============================================
+
+function cleanClaimInput(
+  claim = {}
+) {
+
+  return {
+
+    claimNumber:
+      String(
+        claim.claimNumber ||
+        ""
+      ).trim(),
+
+    providerName:
+      String(
+        claim.providerName ||
+        ""
+      ).trim(),
+
+    patientLabel:
+      String(
+        claim.patientLabel ||
+        ""
+      ).trim(),
+
+    diagnosisCodes:
+
+      Array.isArray(
+        claim.diagnosisCodes
+      )
+
+        ? claim.diagnosisCodes
+            .map(
+              (code) =>
+                String(code)
+                  .trim()
+            )
+            .filter(Boolean)
+
+        : [],
+
+    clinicalNote:
+      String(
+        claim.clinicalNote ||
+        ""
+      ).trim(),
+
+    lineItems:
+
+      Array.isArray(
+        claim.lineItems
+      )
+
+        ? claim.lineItems.map(
+            (item) => ({
+
+              code:
+                String(
+                  item.code ||
+                  ""
+                ).trim(),
+
+              description:
+                String(
+                  item.description ||
+                  ""
+                ).trim(),
+
+              serviceDate:
+                String(
+                  item.serviceDate ||
+                  ""
+                ).trim(),
+
+              units:
+                Number(
+                  item.units ||
+                  1
+                ),
+
+              amount:
+                Number(
+                  item.amount ||
+                  0
+                )
+
+            })
+          )
+
+        : []
+
+  };
+
+}
+
+
+
+// =============================================
+// Validate claim
+// =============================================
+
+function validateClaim(
+  claim
+) {
+
+  const errors =
+    [];
+
+
+  if (
+    !claim.claimNumber
+  ) {
+
+    errors.push(
+      "Claim number is required."
     );
 
   }
-);
 
 
-app.get(
-  "/style.css",
-  (_req, res) => {
+  if (
+    !claim.providerName
+  ) {
 
-    res.sendFile(
-      "style.css",
-      {
-        root: process.cwd()
-      }
+    errors.push(
+      "Provider name is required."
     );
 
   }
-);
 
 
-app.get(
-  "/script.js",
-  (_req, res) => {
+  if (
+    !Array.isArray(
+      claim.lineItems
+    ) ||
+    claim.lineItems.length === 0
+  ) {
 
-    res.sendFile(
-      "script.js",
-      {
-        root: process.cwd()
-      }
+    errors.push(
+      "At least one claim line is required."
     );
 
   }
-);
 
 
-// ==================================================
-// Health check
-// ==================================================
+  claim.lineItems.forEach(
+    (item, index) => {
+
+      if (
+        !item.code
+      ) {
+
+        errors.push(
+          `Line ${index + 1}: procedure code is required.`
+        );
+
+      }
+
+
+      if (
+        !Number.isFinite(
+          item.units
+        ) ||
+        item.units <= 0
+      ) {
+
+        errors.push(
+          `Line ${index + 1}: units must be greater than zero.`
+        );
+
+      }
+
+
+      if (
+        !Number.isFinite(
+          item.amount
+        ) ||
+        item.amount < 0
+      ) {
+
+        errors.push(
+          `Line ${index + 1}: amount must be zero or greater.`
+        );
+
+      }
+
+    }
+  );
+
+
+  return errors;
+
+}
+
+
+
+// =============================================
+// Merge AI findings into rule findings
+// =============================================
+
+function mergeAiFindings(
+  analysis,
+  aiReview
+) {
+
+  if (
+    !aiReview.available ||
+    !Array.isArray(
+      aiReview.findings
+    )
+  ) {
+
+    return;
+
+  }
+
+
+  for (
+    const aiFinding
+    of aiReview.findings
+  ) {
+
+    const matchingRuleFinding =
+      analysis.flags.find(
+        (flag) =>
+          flag.lineCode &&
+          aiFinding.lineCode &&
+          flag.lineCode ===
+            aiFinding.lineCode
+      );
+
+
+    if (
+      matchingRuleFinding
+    ) {
+
+      // -----------------------------------------
+      // Mark finding as detected by AI too
+      // -----------------------------------------
+
+      if (
+        !Array.isArray(
+          matchingRuleFinding.detectedBy
+        )
+      ) {
+
+        matchingRuleFinding.detectedBy =
+          ["rules"];
+
+      }
+
+
+      if (
+        !matchingRuleFinding
+          .detectedBy
+          .includes("ai")
+      ) {
+
+        matchingRuleFinding
+          .detectedBy
+          .push("ai");
+
+      }
+
+
+
+      // -----------------------------------------
+      // Store AI's separate review
+      // -----------------------------------------
+
+      matchingRuleFinding.aiReview = {
+
+        severity:
+          aiFinding.severity,
+
+        reason:
+          aiFinding.reason,
+
+        message:
+          aiFinding.message,
+
+        evidence:
+          aiFinding.evidence
+
+      };
+
+
+
+      // -----------------------------------------
+      // Promote merged finding if AI rated it
+      // more severely
+      // -----------------------------------------
+
+      const ruleRank =
+        SEVERITY_RANK[
+          matchingRuleFinding.severity
+        ] ||
+        0;
+
+
+      const aiRank =
+        SEVERITY_RANK[
+          aiFinding.severity
+        ] ||
+        0;
+
+
+      if (
+        aiRank >
+        ruleRank
+      ) {
+
+        matchingRuleFinding.severity =
+          aiFinding.severity;
+
+      }
+
+    } else {
+
+      // -----------------------------------------
+      // AI-only finding
+      // -----------------------------------------
+
+      analysis.flags.push({
+
+        type:
+          "ai_review",
+
+        severity:
+          aiFinding.severity,
+
+        lineCode:
+          aiFinding.lineCode ||
+          null,
+
+        message:
+          aiFinding.message,
+
+        evidence:
+          aiFinding.evidence,
+
+        detectedBy:
+          ["ai"],
+
+        aiReview: {
+
+          severity:
+            aiFinding.severity,
+
+          reason:
+            aiFinding.reason,
+
+          message:
+            aiFinding.message,
+
+          evidence:
+            aiFinding.evidence
+
+        }
+
+      });
+
+    }
+
+  }
+
+}
+
+
+
+// =============================================
+// Health
+// =============================================
 
 app.get(
   "/api/health",
   (req, res) => {
 
     res.json({
-      ok: true
+
+      ok:
+        true,
+
+      service:
+        "claim-integrity"
+
     });
 
   }
 );
 
 
-// ==================================================
-// Get all claims
-// ==================================================
 
-app.get(
-  "/api/claims",
-  (req, res) => {
-
-    const claims =
-      listClaims();
-
-    res.json(claims);
-
-  }
-);
-
-
-// ==================================================
-// Get one claim
-// ==================================================
-
-app.get(
-  "/api/claims/:id",
-  (req, res) => {
-
-    const id =
-      Number(req.params.id);
-
-
-    const claim =
-      getClaim(id);
-
-
-    if (!claim) {
-
-      return res
-        .status(404)
-        .json({
-          error: "Claim not found."
-        });
-
-    }
-
-
-    res.json(claim);
-
-  }
-);
-
-
-// ==================================================
-// Temporary AI test endpoint
-//
-// Remove this before final submission.
-// ==================================================
+// =============================================
+// AI test
+// =============================================
 
 app.get(
   "/api/test-ai",
@@ -177,56 +531,78 @@ app.get(
 
     try {
 
-      const demoClaim = {
+      if (
+        !process.env
+          .OPENAI_API_KEY
+      ) {
 
-        claimId:
-          "DEMO-TEST",
+        return res
+          .status(500)
+          .json({
 
-        lines: [
+            ok:
+              false,
 
-          {
+            error:
+              "OPENAI_API_KEY is missing."
 
-            id:
-              "L1",
+          });
 
-            code:
-              "70551",
-
-            service:
-              "Brain MRI",
-
-            amount:
-              2400
-
-          }
-
-        ],
-
-        documents: [
-
-          {
-
-            id:
-              "DOC-1",
-
-            text:
-              "No imaging ordered today."
-
-          }
-
-        ]
-
-      };
+      }
 
 
       const result =
-        await reviewClaimWithAI(
-          demoClaim
-        );
+        await reviewClaimWithAI({
+
+          claimNumber:
+            "TEST-AI",
+
+          providerName:
+            "Synthetic Test Provider",
+
+          patientLabel:
+            "Patient Test",
+
+          diagnosisCodes:
+            ["R10.9"],
+
+          clinicalNote:
+            "Synthetic test claim.",
+
+          lineItems: [
+
+            {
+
+              code:
+                "99213",
+
+              description:
+                "Office visit",
+
+              serviceDate:
+                "2026-09-05",
+
+              units:
+                1,
+
+              amount:
+                110
+
+            }
+
+          ]
+
+        });
 
 
-      res.json(result);
+      return res.json({
 
+        ok:
+          true,
+
+        result
+
+      });
 
     } catch (error) {
 
@@ -236,9 +612,12 @@ app.get(
       );
 
 
-      res
+      return res
         .status(500)
         .json({
+
+          ok:
+            false,
 
           error:
             error.message
@@ -251,47 +630,10 @@ app.get(
 );
 
 
-// ==================================================
-// Dashboard
-// ==================================================
 
-app.get(
-  "/api/dashboard",
-  (req, res) => {
-
-    res.json({
-
-      stats:
-        getDashboardStats(),
-
-      claims:
-        listClaims(50)
-
-    });
-
-  }
-);
-
-
-// ==================================================
+// =============================================
 // Analyze claim
-//
-// FLOW:
-//
-// Browser
-//   ↓
-// Deterministic rules
-//   ↓
-// AI review
-//   ↓
-// Merge findings
-//   ↓
-// Check for HIGH anomaly
-//   ↓
-// Automatic Vapi clarification call
-//   ↓
-// Save result
-// ==================================================
+// =============================================
 
 app.post(
   "/api/claims/analyze",
@@ -299,18 +641,16 @@ app.post(
 
     try {
 
-      const claim =
-        req.body || {};
+      const cleanClaim =
+        cleanClaimInput(
+          req.body
+        );
 
-
-      // ============================================
-      // STEP 1
-      //
-      // Validate input
-      // ============================================
 
       const errors =
-        validateClaim(claim);
+        validateClaim(
+          cleanClaim
+        );
 
 
       if (
@@ -320,89 +660,18 @@ app.post(
         return res
           .status(400)
           .json({
+
             errors
+
           });
 
       }
 
 
-      // ============================================
-      // STEP 2
-      //
-      // Clean browser input
-      // ============================================
 
-      const cleanClaim = {
-
-        claimNumber:
-          String(
-            claim.claimNumber
-          ).trim(),
-
-        providerName:
-          String(
-            claim.providerName
-          ).trim(),
-
-        patientLabel:
-          String(
-            claim.patientLabel || ""
-          ).trim(),
-
-        diagnosisCodes:
-          Array.isArray(
-            claim.diagnosisCodes
-          )
-            ? claim.diagnosisCodes.map(
-                String
-              )
-            : [],
-
-        clinicalNote:
-          String(
-            claim.clinicalNote || ""
-          ).trim(),
-
-        lineItems:
-          claim.lineItems.map(
-            (item) => ({
-
-              code:
-                String(
-                  item.code || ""
-                ).trim(),
-
-              description:
-                String(
-                  item.description || ""
-                ).trim(),
-
-              serviceDate:
-                String(
-                  item.serviceDate || ""
-                ).trim(),
-
-              units:
-                Number(
-                  item.units || 1
-                ),
-
-              amount:
-                Number(
-                  item.amount || 0
-                )
-
-            })
-          )
-
-      };
-
-
-      // ============================================
-      // STEP 3
-      //
-      // Deterministic analyzer
-      // ============================================
+      // =========================================
+      // 1. DETERMINISTIC RULES
+      // =========================================
 
       const analysis =
         analyzeClaim(
@@ -410,33 +679,54 @@ app.post(
         );
 
 
-      // Mark existing findings as rule findings
-
       analysis.flags =
         analysis.flags.map(
           (flag) => ({
 
             ...flag,
 
-            detectedBy: [
-              "rules"
-            ]
+            detectedBy:
+
+              Array.isArray(
+                flag.detectedBy
+              )
+
+                ? flag.detectedBy
+
+                : ["rules"]
 
           })
         );
 
 
-      // ============================================
-      // STEP 4
-      //
-      // AI evidence reviewer
-      // ============================================
 
-      let aiResult = {
+      // =========================================
+      // Calculate RULES rating BEFORE AI merge
+      // =========================================
 
-        available: false,
+      const rulesRiskLevel =
+        deriveRiskLevelFromFlags(
+          analysis.flags
+        );
 
-        findings: []
+
+      console.log(
+        `Rules rating for ${cleanClaim.claimNumber}: ${rulesRiskLevel}`
+      );
+
+
+
+      // =========================================
+      // 2. AI REVIEW
+      // =========================================
+
+      let aiReview = {
+
+        available:
+          false,
+
+        findings:
+          []
 
       };
 
@@ -448,16 +738,18 @@ app.post(
         );
 
 
-        aiResult =
+        aiReview =
           await reviewClaimWithAI(
             cleanClaim
           );
 
 
         console.log(
-          `AI review complete. ${aiResult.findings?.length || 0} finding(s).`
+          `AI review complete. ${
+            aiReview.findings?.length ||
+            0
+          } finding(s).`
         );
-
 
       } catch (error) {
 
@@ -467,294 +759,253 @@ app.post(
         );
 
 
-        // AI failure does not stop deterministic
-        // claim analysis.
+        aiReview = {
 
-        aiResult = {
+          available:
+            false,
 
-          available: false,
+          findings:
+            [],
 
-          findings: []
+          error:
+            error.message
 
         };
 
       }
 
 
-      // ============================================
-      // STEP 5
+
+      // =========================================
+      // Calculate AI rating independently
+      // BEFORE merging with rules
+      // =========================================
+
+      const aiRiskLevel =
+
+        aiReview.available
+
+          ? deriveRiskLevelFromFlags(
+              aiReview.findings ||
+              []
+            )
+
+          : "unavailable";
+
+
+      console.log(
+        `AI rating for ${cleanClaim.claimNumber}: ${aiRiskLevel}`
+      );
+
+
+
+      // =========================================
+      // 3. MERGE RULES + AI
+      // =========================================
+
+      mergeAiFindings(
+        analysis,
+        aiReview
+      );
+
+
+
+      // =========================================
+      // 4. FINAL HYBRID RATING
       //
-      // Merge AI findings with rule findings
-      // ============================================
+      // Highest merged finding wins.
+      // =========================================
 
-      if (
-        aiResult.available &&
-        Array.isArray(
-          aiResult.findings
-        )
-      ) {
-
-        for (
-          const aiFinding
-          of aiResult.findings
-        ) {
-
-          const existingFlag =
-            analysis.flags.find(
-              (flag) =>
-                flag.lineCode ===
-                aiFinding.lineCode
-            );
+      const finalRiskLevel =
+        deriveRiskLevelFromFlags(
+          analysis.flags
+        );
 
 
-          // ----------------------------------------
-          // Rules + AI found same procedure
-          // ----------------------------------------
-
-          if (existingFlag) {
-
-            if (
-              !existingFlag
-                .detectedBy
-                .includes("ai")
-            ) {
-
-              existingFlag
-                .detectedBy
-                .push("ai");
-
-            }
+      analysis.rulesRiskLevel =
+        rulesRiskLevel;
 
 
-            existingFlag.aiReview = {
-
-              reason:
-                aiFinding.reason,
-
-              severity:
-                aiFinding.severity,
-
-              message:
-                aiFinding.message,
-
-              evidence:
-                aiFinding.evidence
-
-            };
+      analysis.aiRiskLevel =
+        aiRiskLevel;
 
 
-          } else {
+      analysis.riskLevel =
+        finalRiskLevel;
 
-            // --------------------------------------
-            // AI-only finding
-            // --------------------------------------
-
-            analysis.flags.push({
-
-              type:
-                aiFinding.reason,
-
-              severity:
-                aiFinding.severity,
-
-              lineCode:
-                aiFinding.lineCode,
-
-              message:
-                aiFinding.message,
-
-              evidence:
-                aiFinding.evidence,
-
-              detectedBy: [
-                "ai"
-              ]
-
-            });
-
-          }
-
-        }
-
-      }
-
-
-      // ============================================
-      // STEP 6
-      //
-      // Record analysis mode
-      // ============================================
 
       analysis.aiAvailable =
-        aiResult.available;
+        aiReview.available ===
+        true;
 
 
       analysis.analysisMode =
-        aiResult.available
+
+        aiReview.available
+
           ? "hybrid"
-          : "rules-only";
+
+          : "rules";
 
 
-      // ============================================
-      // STEP 7
+      console.log(
+        `Final rating for ${cleanClaim.claimNumber}: ${finalRiskLevel}`
+      );
+
+
+
+      // =========================================
+      // 5. VAPI
       //
-      // Determine whether automatic clarification
-      // call should happen.
-      //
-      // Current rule:
-      //
-      // - At least one HIGH finding
-      // - DEMO_AUTO_CALL=true
-      // - Claim has not already been called
-      // ============================================
+      // Only FINAL HIGH claims trigger a call.
+      // =========================================
 
       let clarificationCall = {
 
-        triggered: false
+        triggered:
+          false,
+
+        reason:
+          "not_required"
 
       };
 
 
-      const hasHighSeverityFinding =
-        analysis.flags.some(
-          (flag) =>
-            flag.severity === "high"
-        );
-
-
-      const alreadyCalled =
-        autoCalledClaims.has(
-          cleanClaim.claimNumber
-        );
-
-
       if (
-        hasHighSeverityFinding &&
-        !alreadyCalled
+        analysis.riskLevel ===
+        "high"
       ) {
 
-        try {
-
-          clarificationCall =
-            await triggerVapiClarification(
-              cleanClaim,
-              analysis
-            );
-
-
-          if (
-            clarificationCall.triggered
-          ) {
-
-            // Mark this claim as already called
-
-            autoCalledClaims.add(
-              cleanClaim.claimNumber
-            );
-
-
-            console.log(
-              `Automatic clarification call triggered for ${cleanClaim.claimNumber}.`
-            );
-
-
-            console.log(
-              `Vapi call ID: ${clarificationCall.callId || "unknown"}`
-            );
-
-          }
-
-
-        } catch (error) {
-
-          console.error(
-            "Automatic Vapi call failed:",
-            error.message
-          );
-
-
-          // IMPORTANT:
-          //
-          // The claim analysis should still succeed
-          // even if Vapi fails.
+        if (
+          autoCalledClaims.has(
+            cleanClaim.claimNumber
+          )
+        ) {
 
           clarificationCall = {
 
-            triggered: false,
+            triggered:
+              false,
 
-            error:
-              error.message
+            reason:
+              "already_called"
 
           };
 
+
+          console.log(
+            `Clarification already triggered for ${cleanClaim.claimNumber}.`
+          );
+
+        } else {
+
+          try {
+
+            clarificationCall =
+              await triggerVapiClarification(
+                cleanClaim,
+                analysis
+              );
+
+
+            if (
+              clarificationCall
+                .triggered
+            ) {
+
+              autoCalledClaims.add(
+                cleanClaim.claimNumber
+              );
+
+            }
+
+
+            if (
+              clarificationCall
+                .callId
+            ) {
+
+              createVapiCall(
+                cleanClaim.claimNumber,
+                clarificationCall.callId,
+                clarificationCall.status ||
+                  "created"
+              );
+
+            }
+
+          } catch (error) {
+
+            console.error(
+              "Vapi clarification failed:",
+              error.message
+            );
+
+
+            clarificationCall = {
+
+              triggered:
+                false,
+
+              reason:
+                "vapi_error",
+
+              error:
+                error.message
+
+            };
+
+          }
+
         }
-
-
-      } else if (alreadyCalled) {
-
-        console.log(
-          `Claim ${cleanClaim.claimNumber} already triggered a call. Skipping Vapi.`
-        );
-
-
-        clarificationCall = {
-
-          triggered: false,
-
-          reason:
-            "already_called"
-
-        };
-
-
-      } else {
-
-        console.log(
-          `Claim ${cleanClaim.claimNumber} has no high-severity findings. No Vapi call triggered.`
-        );
-
-
-        clarificationCall = {
-
-          triggered: false,
-
-          reason:
-            "no_high_severity_findings"
-
-        };
 
       }
 
-
-      // Attach call information to analysis
 
       analysis.clarificationCall =
         clarificationCall;
 
 
-      // ============================================
-      // STEP 8
-      //
-      // Save claim + analysis
-      // ============================================
 
-      const savedClaim =
+      // =========================================
+      // 6. SAVE CLAIM
+      // =========================================
+
+      const storedClaim =
         createClaim(
           cleanClaim,
           analysis
         );
 
 
-      // ============================================
-      // STEP 9
-      //
-      // Return everything to frontend
-      // ============================================
 
-      res
-        .status(201)
-        .json(savedClaim);
+      // =========================================
+      // 7. RETURN RESULT
+      // =========================================
 
+      return res.json({
+
+        ...storedClaim,
+
+        rulesRiskLevel:
+          analysis.rulesRiskLevel,
+
+        aiRiskLevel:
+          analysis.aiRiskLevel,
+
+        riskLevel:
+          analysis.riskLevel,
+
+        aiAvailable:
+          analysis.aiAvailable,
+
+        analysisMode:
+          analysis.analysisMode,
+
+        clarificationCall:
+          analysis.clarificationCall
+
+      });
 
     } catch (error) {
 
@@ -764,14 +1015,11 @@ app.post(
       );
 
 
-      res
+      return res
         .status(500)
         .json({
 
           error:
-            "Claim analysis failed.",
-
-          details:
             error.message
 
         });
@@ -782,115 +1030,464 @@ app.post(
 );
 
 
-// ==================================================
-// Validate claim input
-// ==================================================
 
-function validateClaim(
-  claim
-) {
+// =============================================
+// Get one claim
+// =============================================
 
-  const errors = [];
+app.get(
+  "/api/claims/:id",
+  (req, res) => {
+
+    try {
+
+      const id =
+        Number(
+          req.params.id
+        );
 
 
-  // ----------------------------------------------
-  // Claim number
-  // ----------------------------------------------
+      if (
+        !Number.isInteger(id)
+      ) {
 
-  if (
-    !String(
-      claim.claimNumber || ""
-    ).trim()
-  ) {
+        return res
+          .status(400)
+          .json({
 
-    errors.push(
-      "Claim number is required."
-    );
+            error:
+              "Invalid claim ID."
+
+          });
+
+      }
+
+
+      const claim =
+        getClaim(
+          id
+        );
+
+
+      if (
+        !claim
+      ) {
+
+        return res
+          .status(404)
+          .json({
+
+            error:
+              "Claim not found."
+
+          });
+
+      }
+
+
+      return res.json(
+        claim
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Could not load claim:",
+        error
+      );
+
+
+      return res
+        .status(500)
+        .json({
+
+          error:
+            error.message
+
+        });
+
+    }
 
   }
+);
 
 
-  // ----------------------------------------------
-  // Provider
-  // ----------------------------------------------
 
-  if (
-    !String(
-      claim.providerName || ""
-    ).trim()
-  ) {
+// =============================================
+// List claims
+// =============================================
 
-    errors.push(
-      "Provider name is required."
-    );
+app.get(
+  "/api/claims",
+  (req, res) => {
+
+    try {
+
+      return res.json(
+        listClaims()
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Could not list claims:",
+        error
+      );
+
+
+      return res
+        .status(500)
+        .json({
+
+          error:
+            error.message
+
+        });
+
+    }
 
   }
+);
 
 
-  // ----------------------------------------------
-  // Line items
-  // ----------------------------------------------
 
-  if (
-    !Array.isArray(
-      claim.lineItems
-    ) ||
-    claim.lineItems.length === 0
-  ) {
+// =============================================
+// Dashboard
+// =============================================
 
-    errors.push(
-      "At least one line item is required."
-    );
+app.get(
+  "/api/dashboard",
+  (req, res) => {
+
+    try {
+
+      const claims =
+        listClaims();
 
 
-  } else {
+      const stats =
+        getDashboardStats();
 
-    claim.lineItems.forEach(
-      (item, index) => {
 
-        // Procedure code
+      return res.json({
+
+        ...stats,
+
+        claims
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Dashboard failed:",
+        error
+      );
+
+
+      return res
+        .status(500)
+        .json({
+
+          error:
+            error.message
+
+        });
+
+    }
+
+  }
+);
+
+
+
+// =============================================
+// Get Vapi calls for claim
+// =============================================
+
+app.get(
+  "/api/vapi/calls/:claimNumber",
+  (req, res) => {
+
+    try {
+
+      const claimNumber =
+        String(
+          req.params
+            .claimNumber ||
+          ""
+        );
+
+
+      const calls =
+        getVapiCallsForClaim(
+          claimNumber
+        );
+
+
+      return res.json(
+        calls
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Could not load Vapi calls:",
+        error
+      );
+
+
+      return res
+        .status(500)
+        .json({
+
+          error:
+            error.message
+
+        });
+
+    }
+
+  }
+);
+
+
+
+// =============================================
+// Vapi webhook
+// =============================================
+
+app.post(
+  "/api/vapi/webhook",
+  (req, res) => {
+
+    try {
+
+      const message =
+        req.body?.message;
+
+
+      if (
+        !message
+      ) {
+
+        return res
+          .status(400)
+          .json({
+
+            error:
+              "Missing Vapi message."
+
+          });
+
+      }
+
+
+      console.log(
+        `Vapi webhook received: ${message.type}`
+      );
+
+
+
+      // =========================================
+      // Status update
+      // =========================================
+
+      if (
+        message.type ===
+        "status-update"
+      ) {
+
+        const callId =
+          message.call?.id;
+
+
+        const status =
+          message.status ||
+          message.call?.status;
+
 
         if (
-          !String(
-            item.code || ""
-          ).trim()
+          callId &&
+          status
         ) {
 
-          errors.push(
-            `Line ${index + 1}: procedure code is required.`
+          updateVapiCallStatus(
+            callId,
+            status
           );
 
-        }
 
-
-        // Amount
-
-        if (
-          !(
-            Number(item.amount) >= 0
-          )
-        ) {
-
-          errors.push(
-            `Line ${index + 1}: amount must be a number.`
+          console.log(
+            `Vapi call ${callId}: ${status}`
           );
 
         }
 
       }
-    );
+
+
+
+      // =========================================
+      // End of call
+      // =========================================
+
+      if (
+        message.type ===
+        "end-of-call-report"
+      ) {
+
+        const callId =
+          message.call?.id;
+
+
+        if (
+          !callId
+        ) {
+
+          return res
+            .status(400)
+            .json({
+
+              error:
+                "Missing call ID."
+
+            });
+
+        }
+
+
+        const transcript =
+
+          message
+            .artifact
+            ?.transcript ||
+
+          message
+            .transcript ||
+
+          "";
+
+
+        const messages =
+
+          message
+            .artifact
+            ?.messages ||
+
+          message
+            .messages ||
+
+          [];
+
+
+        const endedReason =
+
+          message
+            .endedReason ||
+
+          message
+            .call
+            ?.endedReason ||
+
+          null;
+
+
+        const startedAt =
+
+          message
+            .startedAt ||
+
+          message
+            .call
+            ?.startedAt ||
+
+          null;
+
+
+        const endedAt =
+
+          message
+            .endedAt ||
+
+          message
+            .call
+            ?.endedAt ||
+
+          null;
+
+
+        completeVapiCall(
+          callId,
+          {
+
+            status:
+              "ended",
+
+            endedReason,
+
+            transcript,
+
+            messages,
+
+            startedAt,
+
+            endedAt
+
+          }
+        );
+
+
+        console.log(
+          `Vapi call completed: ${callId}`
+        );
+
+
+        console.log(
+          `Transcript saved: ${Boolean(
+            transcript
+          )}`
+        );
+
+      }
+
+
+      return res
+        .status(200)
+        .json({
+
+          received:
+            true
+
+        });
+
+    } catch (error) {
+
+      console.error(
+        "Vapi webhook error:",
+        error
+      );
+
+
+      return res
+        .status(500)
+        .json({
+
+          error:
+            error.message
+
+        });
+
+    }
 
   }
+);
 
 
-  return errors;
 
-}
-
-
-// ==================================================
+// =============================================
 // Start server
-// ==================================================
+// =============================================
 
 app.listen(
   PORT,
@@ -902,152 +1499,33 @@ app.listen(
 
 
     console.log(
-      `AI key loaded: ${Boolean(process.env.OPENAI_API_KEY)}`
+      "AI key loaded:",
+      Boolean(
+        process.env
+          .OPENAI_API_KEY
+      )
     );
 
 
     console.log(
-      `AI model: ${process.env.OPENAI_MODEL || "default"}`
+      "AI model:",
+      process.env
+        .OPENAI_MODEL ||
+        "gpt-5.6-luna"
     );
 
 
     console.log(
-      `Vapi auto-call: ${process.env.DEMO_AUTO_CALL === "true" ? "ENABLED" : "DISABLED"}`
+      "Vapi auto call:",
+      process.env
+        .DEMO_AUTO_CALL ===
+        "true"
     );
 
 
     console.log(
-      `Vapi configured: ${
-        Boolean(
-          process.env.VAPI_API_KEY &&
-          process.env.VAPI_ASSISTANT_ID &&
-          process.env.VAPI_PHONE_NUMBER_ID &&
-          process.env.DEMO_BILLING_CONTACT
-        )
-      }`
+      "Vapi webhook endpoint: /api/vapi/webhook"
     );
-
-  }
-);
-
-
-// ==================================================
-// Vapi webhook
-//
-// Configure this route in Vapi as:
-// https://<your-ngrok-domain>/api/vapi/webhook
-// ==================================================
-
-app.post(
-  "/api/vapi/webhook",
-  (req, res) => {
-
-    const message =
-      req.body?.message;
-
-
-    if (!message?.type) {
-
-      return res
-        .status(400)
-        .json({
-          error: "Expected a Vapi server event."
-        });
-
-    }
-
-
-    // Vapi includes the complete, durable transcript in the end-of-call
-    // report. Transcript events during a call can be partial, so do not
-    // persist those as the final result.
-
-    if (message.type === "end-of-call-report") {
-
-      const callId =
-        message.call?.id;
-
-
-      if (!callId) {
-
-        return res
-          .status(400)
-          .json({
-            error: "Vapi end-of-call report did not include a call ID."
-          });
-
-      }
-
-
-      const claimNumber =
-        message.call?.metadata?.claimNumber ||
-        message.call?.assistantOverrides?.variableValues?.claimNumber ||
-        null;
-
-
-      const savedTranscript =
-        saveVapiCallTranscript({
-          callId,
-          claimNumber,
-          transcript:
-            message.artifact?.transcript,
-          messages:
-            message.artifact?.messages,
-          endedReason:
-            message.endedReason
-        });
-
-
-      console.log(
-        `Saved Vapi transcript for call ${callId}.`
-      );
-
-
-      return res.json({
-        ok: true,
-        callId:
-          savedTranscript.callId
-      });
-
-    }
-
-
-    // Other Vapi events (such as status and transcript updates) are
-    // informational for this app and only need acknowledgement.
-
-    res.json({
-      ok: true
-    });
-
-  }
-);
-
-
-// ==================================================
-// Retrieve a saved Vapi transcript
-// ==================================================
-
-app.get(
-  "/api/vapi/calls/:callId",
-  (req, res) => {
-
-    const transcript =
-      getVapiCallTranscript(
-        req.params.callId
-      );
-
-
-    if (!transcript) {
-
-      return res
-        .status(404)
-        .json({
-          error: "Vapi call transcript not found."
-        });
-
-    }
-
-
-    res.json(transcript);
 
   }
 );

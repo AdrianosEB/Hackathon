@@ -1,0 +1,330 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>
+    Claim Integrity
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  />
+
+</head>
+
+
+<body>
+
+
+  <header class="topbar">
+
+    <div class="brand">
+      Claim Integrity
+    </div>
+
+
+    <div class="demo-controls">
+
+      <select id="demoSelect">
+
+        <option value="clean">
+          Demo 1 — Clean
+        </option>
+
+        <option value="review">
+          Demo 2 — Review
+        </option>
+
+        <option value="high">
+          Demo 3 — High Risk
+        </option>
+
+      </select>
+
+
+      <button
+        id="demoBtn"
+        class="secondary"
+        type="button"
+      >
+        Load Test
+      </button>
+
+    </div>
+
+  </header>
+
+
+
+  <main class="app-shell">
+
+
+    <!-- =========================================
+         PAST CLAIMS
+    ========================================== -->
+
+    <aside class="claims-sidebar">
+
+      <div class="sidebar-header">
+
+        <h2>
+          Past Claims
+        </h2>
+
+      </div>
+
+
+      <div class="table-wrap">
+
+        <table class="claims-table">
+
+          <thead>
+
+            <tr>
+
+              <th>
+                Claim
+              </th>
+
+              <th>
+                Provider
+              </th>
+
+              <th>
+                Rules
+              </th>
+
+              <th>
+                AI
+              </th>
+
+              <th>
+                Final
+              </th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody id="claimsTable">
+
+            <tr>
+
+              <td
+                colspan="5"
+                class="muted"
+              >
+                No claims yet.
+              </td>
+
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </aside>
+
+
+
+    <!-- =========================================
+         WORKSPACE
+    ========================================== -->
+
+    <section class="workspace">
+
+
+      <!-- =======================================
+           NEW CLAIM
+      ======================================== -->
+
+      <section class="panel form-panel">
+
+        <div class="section-header">
+
+          <h2>
+            New Claim
+          </h2>
+
+        </div>
+
+
+        <form id="claimForm">
+
+
+          <div class="two-col">
+
+
+            <label>
+
+              Claim number
+
+              <input
+                id="claimNumber"
+                required
+                placeholder="CLM-10429"
+              />
+
+            </label>
+
+
+
+            <label>
+
+              Provider
+
+              <input
+                id="providerName"
+                required
+                placeholder="Northside Medical Center"
+              />
+
+            </label>
+
+
+          </div>
+
+
+
+          <div class="two-col">
+
+
+            <label>
+
+              Patient label
+
+              <input
+                id="patientLabel"
+                placeholder="Patient A"
+              />
+
+            </label>
+
+
+
+            <label>
+
+              Diagnosis codes
+
+              <input
+                id="diagnosisCodes"
+                placeholder="R10.9, R11.0"
+              />
+
+            </label>
+
+
+          </div>
+
+
+
+          <label>
+
+            Clinical note
+
+            <textarea
+              id="clinicalNote"
+              rows="4"
+              placeholder="Clinical note"
+            ></textarea>
+
+          </label>
+
+
+
+          <div class="line-header">
+
+            <h3>
+              Claim Lines
+            </h3>
+
+
+            <button
+              type="button"
+              id="addLineBtn"
+              class="text-btn"
+            >
+              + Add line
+            </button>
+
+          </div>
+
+
+
+          <div
+            id="lineItems"
+            class="line-items"
+          ></div>
+
+
+
+          <div
+            id="formError"
+            class="error hidden"
+          ></div>
+
+
+
+          <button
+            class="primary"
+            type="submit"
+          >
+            Analyze Claim
+          </button>
+
+
+        </form>
+
+      </section>
+
+
+
+      <!-- =======================================
+           RESULT
+      ======================================== -->
+
+      <section
+        class="panel result-panel"
+        id="resultPanel"
+      >
+
+        <div
+          id="emptyResult"
+          class="empty"
+        >
+          Select a past claim or analyze a new claim.
+        </div>
+
+
+        <div
+          id="resultContent"
+          class="hidden"
+        ></div>
+
+      </section>
+
+
+    </section>
+
+
+  </main>
+
+
+  <script src="/script.js"></script>
+
+</body>
+
+</html>
