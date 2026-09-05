@@ -1,111 +1,108 @@
 // --------------------------------------------------
+// CLAIM ANALYZER
+//
+// Answers one question: how much of this claim's own
+// content needs a human to look at it?
+//
+// --------------------------------------------------
+// VOCABULARY — read this before changing anything
+// --------------------------------------------------
+//
+// Nothing in this file concludes fraud, and none of
+// its output should be phrased as though it might.
+// What we produce is a REVIEW PRIORITY: a statement
+// about how much attention a claim warrants, not a
+// statement about the honesty of whoever sent it.
+//
+// The distinction is not decorative. Duplicate line
+// items are usually a resubmission or a clearinghouse
+// glitch. High unit counts are usually correct. A
+// short clinical note usually means a busy clinician,
+// not an unsupported service. If the output says
+// "anomaly" the reader hears "error"; if it says
+// "suspicious" they hear "criminal". So:
+//
+//   reviewPriority   0-100, how much attention
+//   reviewLevel      routine | review | priority
+//   observations     what we noticed, with evidence
+//
+// Every observation must state what we saw and what
+// innocent explanation exists for it. If you cannot
+// name an innocent explanation, you have not
+// understood the signal well enough to ship it.
+// --------------------------------------------------
+
+
+// --------------------------------------------------
 // DEMO REFERENCE PRICES
 //
-// IMPORTANT:
+// NOT authoritative reimbursement rates. Temporary
+// values so price-comparison logic can be shown
+// working. Replace with real reference data.
 //
-// These are NOT authoritative reimbursement rates.
-//
-// They are temporary hackathon values so we can
-// demonstrate price-outlier detection.
-//
-// Eventually replace them with real reference data.
+// Note: these are keyed by CPT code NUMBER only. CPT
+// descriptors are copyrighted by the AMA and need a
+// licence to redistribute — do not paste them in here.
 // --------------------------------------------------
 
 const REFERENCE_PRICES = {
-
   "99213": 110,
-
   "99214": 165,
-
   "99215": 230,
-
   "71046": 80,
-
   "74177": 450,
-
   "80053": 35,
-
   "85025": 25,
-
   "93000": 50
-
 };
 
 
-// Some services we want to examine more carefully
+// Services where documentation is worth a second look.
+const HIGH_INTENSITY_CODES = new Set(["99215", "74177"]);
 
-const HIGH_INTENSITY_CODES =
-  new Set([
-    "99215",
-    "74177"
-  ]);
-
-
-// --------------------------------------------------
-// Main claim analysis function
-// --------------------------------------------------
 
 export function analyzeClaim(claim) {
 
-  const flags = [];
+  const observations = [];
 
+  const totalBilled = claim.lineItems.reduce(
+    (total, item) => total + Number(item.amount || 0),
+    0
+  );
 
-  // Calculate total claim amount
-
-  const totalBilled =
-    claim.lineItems.reduce(
-      (total, item) =>
-        total + Number(item.amount || 0),
-      0
-    );
-
-
-  let score = 0;
-
+  let priority = 0;
   let reviewAmount = 0;
 
 
   // ==================================================
-  // RULE 1
-  //
-  // Duplicate procedure code on the same service date
+  // 1. Same code, same date, more than once
   // ==================================================
 
   const seen = new Map();
 
-
   for (const item of claim.lineItems) {
 
-    const key =
-      `${item.code}|${item.serviceDate || ""}`;
-
+    const key = `${item.code}|${item.serviceDate || ""}`;
 
     if (seen.has(key)) {
 
-      score += 28;
+      priority += 28;
+      reviewAmount += Number(item.amount || 0);
 
-      reviewAmount +=
-        Number(item.amount || 0);
-
-
-      flags.push({
-
-        type: "duplicate",
-
-        severity: "high",
-
+      observations.push({
+        type: "repeated_line",
+        weight: "high",
         lineCode: item.code,
-
-        message:
-          `Possible duplicate billing: ${item.code} appears more than once on ${item.serviceDate || "the same date"}.`,
-
+        observation:
+          `Code ${item.code} appears more than once for ${item.serviceDate || "the same date"}.`,
         evidence:
-          `Repeated line item with billed amount $${Number(item.amount || 0).toFixed(2)}.`
-
+          `Repeated line item, $${Number(item.amount || 0).toFixed(2)}.`,
+        innocentExplanation:
+          "Bilateral or repeated procedures are legitimately billed this way, and " +
+          "resubmissions frequently duplicate a line. Modifiers usually resolve it."
       });
 
     }
-
 
     seen.set(key, true);
 
@@ -113,48 +110,27 @@ export function analyzeClaim(claim) {
 
 
   // ==================================================
-  // RULE 2
-  //
-  // Unusually high quantity / units
+  // 2. High unit counts
   // ==================================================
 
   for (const item of claim.lineItems) {
 
-    const units =
-      Number(item.units || 1);
-
+    const units = Number(item.units || 1);
 
     if (units >= 5) {
 
-      score +=
-        Math.min(
-          18,
-          units * 2
-        );
+      priority += Math.min(18, units * 2);
+      reviewAmount += Number(item.amount || 0) * 0.4;
 
-
-      reviewAmount +=
-        Number(item.amount || 0) * 0.4;
-
-
-      flags.push({
-
-        type: "quantity",
-
-        severity:
-          units >= 10
-            ? "high"
-            : "medium",
-
-        lineCode:
-          item.code,
-
-        message:
-          `Unusually high unit count (${units}) for code ${item.code}.`,
-
-        evidence:
-          "High quantities can be valid, but this line deserves manual validation."
-
+      observations.push({
+        type: "unit_count",
+        weight: units >= 10 ? "high" : "medium",
+        lineCode: item.code,
+        observation: `Unit count of ${units} on code ${item.code}.`,
+        evidence: `${units} units billed.`,
+        innocentExplanation:
+          "High unit counts are correct for many drug, supply, and time-based codes. " +
+          "This marks the line for confirmation, nothing more."
       });
 
     }
@@ -163,64 +139,31 @@ export function analyzeClaim(claim) {
 
 
   // ==================================================
-  // RULE 3
-  //
-  // Price outlier
+  // 3. Amount differs from the reference figure
   // ==================================================
 
   for (const item of claim.lineItems) {
 
-    const referencePrice =
-      REFERENCE_PRICES[item.code];
+    const referencePrice = REFERENCE_PRICES[item.code];
+    const amount = Number(item.amount || 0);
 
+    if (referencePrice && amount > referencePrice * 2.5) {
 
-    const amount =
-      Number(item.amount || 0);
+      priority += amount > referencePrice * 5 ? 25 : 16;
+      reviewAmount += Math.max(0, amount - referencePrice);
 
-
-    // Only evaluate codes for which we currently
-    // have a demo reference price.
-
-    if (
-      referencePrice &&
-      amount > referencePrice * 2.5
-    ) {
-
-      const excessAmount =
-        Math.max(
-          0,
-          amount - referencePrice
-        );
-
-
-      score +=
-        amount > referencePrice * 5
-          ? 25
-          : 16;
-
-
-      reviewAmount +=
-        excessAmount;
-
-
-      flags.push({
-
-        type: "price_outlier",
-
-        severity:
-          amount > referencePrice * 5
-            ? "high"
-            : "medium",
-
-        lineCode:
-          item.code,
-
-        message:
-          `Billed amount for ${item.code} is far above this demo's reference value.`,
-
+      observations.push({
+        type: "amount_variance",
+        weight: amount > referencePrice * 5 ? "high" : "medium",
+        lineCode: item.code,
+        observation:
+          `Billed amount for ${item.code} is well above this demo's reference figure.`,
         evidence:
-          `$${amount.toFixed(2)} billed vs. $${referencePrice.toFixed(2)} demo reference.`
-
+          `$${amount.toFixed(2)} billed against a $${referencePrice.toFixed(2)} reference.`,
+        innocentExplanation:
+          "Charge amounts vary enormously by region, facility type, and contract. " +
+          "A charge above a reference figure is not an overcharge — the reference is " +
+          "a placeholder, not a fee schedule."
       });
 
     }
@@ -229,53 +172,34 @@ export function analyzeClaim(claim) {
 
 
   // ==================================================
-  // RULE 4
+  // 4. Documentation length
   //
-  // Limited clinical documentation
-  //
-  // This does NOT determine medical necessity.
-  //
-  // It simply identifies situations where a
-  // high-intensity service has very little
-  // accompanying documentation.
+  // Explicitly NOT a medical-necessity determination.
+  // We are counting characters, which is all we can
+  // honestly claim to be doing.
   // ==================================================
 
-  const noteLength =
-    (claim.clinicalNote || "")
-      .trim()
-      .length;
-
+  const noteLength = (claim.clinicalNote || "").trim().length;
 
   for (const item of claim.lineItems) {
 
-    if (
-      HIGH_INTENSITY_CODES.has(item.code) &&
-      noteLength > 0 &&
-      noteLength < 90
-    ) {
+    if (HIGH_INTENSITY_CODES.has(item.code) && noteLength > 0 && noteLength < 90) {
 
-      score += 18;
+      priority += 18;
+      reviewAmount += Number(item.amount || 0) * 0.5;
 
-
-      reviewAmount +=
-        Number(item.amount || 0) * 0.5;
-
-
-      flags.push({
-
-        type: "documentation",
-
-        severity: "medium",
-
-        lineCode:
-          item.code,
-
-        message:
-          `Documentation may be too limited to clearly support higher-intensity code ${item.code}.`,
-
+      observations.push({
+        type: "documentation_length",
+        weight: "medium",
+        lineCode: item.code,
+        observation:
+          `Brief documentation accompanying higher-intensity code ${item.code}.`,
         evidence:
-          `Clinical note is only ${noteLength} characters long. This is a screening signal, not a coverage determination.`
-
+          `Clinical note is ${noteLength} characters. This is a character count, not a ` +
+          `judgement about the care delivered or whether it was warranted.`,
+        innocentExplanation:
+          "The full record almost always lives in the EHR rather than the claim. A short " +
+          "note attached here says nothing about what was documented elsewhere."
       });
 
     }
@@ -284,87 +208,48 @@ export function analyzeClaim(claim) {
 
 
   // ==================================================
-  // RULE 5
-  //
-  // Missing diagnosis information
+  // 5. No diagnosis supplied
   // ==================================================
 
-  if (
-    !claim.diagnosisCodes ||
-    claim.diagnosisCodes.length === 0
-  ) {
+  if (!claim.diagnosisCodes || claim.diagnosisCodes.length === 0) {
 
-    score += 12;
+    priority += 12;
 
-
-    flags.push({
-
-      type: "missing_context",
-
-      severity: "medium",
-
-      message:
-        "No diagnosis code was supplied with the claim.",
-
-      evidence:
-        "Diagnosis context is needed for procedure-to-diagnosis validation."
-
+    observations.push({
+      type: "missing_field",
+      weight: "medium",
+      observation: "No diagnosis code was supplied.",
+      evidence: "diagnosisCodes was empty.",
+      innocentExplanation:
+        "Commonly an intake or interface problem rather than anything about the claim."
     });
 
   }
 
 
   // ==================================================
-  // Final score
-  // ==================================================
 
-  score =
-    Math.min(
-      100,
-      Math.round(score)
-    );
+  priority = Math.min(100, Math.round(priority));
 
+  reviewAmount = Math.min(
+    totalBilled,
+    Math.round(reviewAmount * 100) / 100
+  );
 
-  // Never let our estimated review amount exceed
-  // the entire claim amount.
+  let reviewLevel = "routine";
 
-  reviewAmount =
-    Math.min(
-      totalBilled,
-      Math.round(
-        reviewAmount * 100
-      ) / 100
-    );
-
-
-  // Convert numeric score to label
-
-  let riskLevel = "low";
-
-
-  if (score >= 60) {
-
-    riskLevel = "high";
-
-  } else if (score >= 25) {
-
-    riskLevel = "review";
-
+  if (priority >= 60) {
+    reviewLevel = "priority";
+  } else if (priority >= 25) {
+    reviewLevel = "review";
   }
 
-
   return {
-
     totalBilled,
-
-    riskScore: score,
-
+    reviewPriority: priority,
     reviewAmount,
-
-    riskLevel,
-
-    flags
-
+    reviewLevel,
+    observations
   };
 
 }

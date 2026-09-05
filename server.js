@@ -10,6 +10,58 @@ import {
   getDashboardStats
 } from "./db.js";
 
+// ---- verification layer ----
+import {
+  verifyProviderCached,
+  triage,
+  coverageReport,
+  migrateClaimsTable,
+  escalate,
+  listOutreach,
+  getOutreach,
+  approveOutreach,
+  rejectOutreach,
+  recordOutcome,
+  dispatch,
+  createVapiAdapter,
+  previewVapiCall,
+  requireOutreachAuth,
+  resolveApprover,
+  OUTREACH_POLICY
+} from "./verification/index.js";
+
+
+// --------------------------------------------------
+// Dispatch adapter
+//
+// main2 dialled from inside the analyze handler. That
+// path is gone. Vapi is an ADAPTER now: the ladder in
+// verification/outreach.js decides a call is
+// warranted, a named human approves it, and dispatch()
+// is the only thing that places it.
+//
+// Two switches, both required:
+//
+//   VAPI_ADAPTER=true   arms this constant
+//   DEMO_AUTO_CALL=true checked inside the adapter
+//
+// With the first off, dispatch() gets no adapter and
+// is a dry run — the default, and the right setting
+// for a demo. With the first on and the second off,
+// the adapter REFUSES rather than silently degrading
+// to a dry run.
+// --------------------------------------------------
+
+const VAPI_ADAPTER =
+  process.env.VAPI_ADAPTER === "true" ? createVapiAdapter() : null;
+
+
+// Adds the NPI / practice-address / data-confidence columns
+// to the existing claims table. Idempotent — safe on
+// every boot, including against your current .db file.
+migrateClaimsTable();
+
+
 const app = express();
 
 const PORT = Number(process.env.PORT || 3000);
@@ -25,17 +77,15 @@ app.use(
   })
 );
 
-// Serve frontend files from /website
-app.use(
-  "/website",
-  express.static("website")
-);
 
-// Load homepage at localhost:3000
+// FIXED: your files live at the repo root, not in a
+// /website folder, so the old static mount and the
+// sendFile both 404'd. Serving the root directory
+// makes /style.css and /script.js resolve.
+app.use(express.static("."));
+
 app.get("/", (req, res) => {
-  res.sendFile("index.html", {
-    root: "website"
-  });
+  res.sendFile("index.html", { root: "." });
 });
 
 
@@ -45,8 +95,66 @@ app.get("/", (req, res) => {
 
 app.get("/api/health", (req, res) => {
   res.json({
-    ok: true
+    ok: true,
+    verification: coverageReport()
   });
+});
+
+
+// -------------------------
+// Which verifiers are live
+//
+// The UI reads this so it can state honestly what was
+// and was not checked.
+// -------------------------
+
+app.get("/api/verification/coverage", (req, res) => {
+  res.json(coverageReport());
+});
+
+
+// -------------------------
+// Verify a provider on its own
+//
+// Handy for the demo: paste an NPI and watch the panel
+// run, without building a whole claim around it.
+// -------------------------
+
+app.post("/api/providers/verify", async (req, res) => {
+
+  const { npi, providerName } = req.body || {};
+
+  if (!String(npi || "").trim() && !String(providerName || "").trim()) {
+
+    return res.status(400).json({
+      errors: ["Supply an npi or a providerName."]
+    });
+
+  }
+
+  try {
+
+    const verification = await verifyProviderCached({
+      npi: String(npi || "").replace(/\D/g, ""),
+      providerName: String(providerName || "").trim(),
+      practiceAddressLine1: req.body.practiceAddressLine1,
+      practiceCity: req.body.practiceCity,
+      practiceState: req.body.practiceState,
+      practicePhone: req.body.practicePhone,
+      lineItems: []
+    });
+
+    res.json(verification);
+
+  } catch (error) {
+
+    res.status(502).json({
+      error: "Provider verification failed to run.",
+      detail: error.message
+    });
+
+  }
+
 });
 
 
@@ -55,11 +163,7 @@ app.get("/api/health", (req, res) => {
 // -------------------------
 
 app.get("/api/claims", (req, res) => {
-
-  const claims = listClaims();
-
-  res.json(claims);
-
+  res.json(listClaims());
 });
 
 
@@ -69,9 +173,7 @@ app.get("/api/claims", (req, res) => {
 
 app.get("/api/claims/:id", (req, res) => {
 
-  const id = Number(req.params.id);
-
-  const claim = getClaim(id);
+  const claim = getClaim(Number(req.params.id));
 
   if (!claim) {
 
@@ -93,11 +195,9 @@ app.get("/api/claims/:id", (req, res) => {
 app.get("/api/dashboard", (req, res) => {
 
   res.json({
-
     stats: getDashboardStats(),
-
-    claims: listClaims(50)
-
+    claims: listClaims(50),
+    coverage: coverageReport()
   });
 
 });
@@ -107,23 +207,16 @@ app.get("/api/dashboard", (req, res) => {
 // Analyze a claim
 // -------------------------
 
-app.post("/api/claims/analyze", (req, res) => {
+app.post("/api/claims/analyze", async (req, res) => {
 
   const claim = req.body || {};
 
   const errors = validateClaim(claim);
 
-
   if (errors.length > 0) {
-
-    return res.status(400).json({
-      errors
-    });
-
+    return res.status(400).json({ errors });
   }
 
-
-  // Clean data received from browser
 
   const cleanClaim = {
 
@@ -132,6 +225,32 @@ app.post("/api/claims/analyze", (req, res) => {
 
     providerName:
       String(claim.providerName).trim(),
+
+    // ---- new provider-identity fields ----
+    //
+    // The NPI is the one that matters. Without it the
+    // provider can only be guessed at by name, and
+    // provider names are not unique.
+    npi:
+      String(claim.npi || "").replace(/\D/g, ""),
+
+    practiceAddressLine1:
+      String(claim.practiceAddressLine1 || "").trim(),
+
+    practiceCity:
+      String(claim.practiceCity || "").trim(),
+
+    practiceState:
+      String(claim.practiceState || "").trim().toUpperCase(),
+
+    practicePhone:
+      String(claim.practicePhone || "").trim(),
+
+    // Optional. Used for tier-0 contact discovery only —
+    // never as evidence about the provider, since they
+    // author the page.
+    practiceWebsite:
+      String(claim.practiceWebsite || "").trim(),
 
     patientLabel:
       String(claim.patientLabel || "").trim(),
@@ -146,40 +265,207 @@ app.post("/api/claims/analyze", (req, res) => {
 
     lineItems:
       claim.lineItems.map((item) => ({
-
-        code:
-          String(item.code || "").trim(),
-
-        description:
-          String(item.description || "").trim(),
-
-        serviceDate:
-          String(item.serviceDate || "").trim(),
-
-        units:
-          Number(item.units || 1),
-
-        amount:
-          Number(item.amount || 0)
-
+        code: String(item.code || "").trim(),
+        description: String(item.description || "").trim(),
+        serviceDate: String(item.serviceDate || "").trim(),
+        units: Number(item.units || 1),
+        amount: Number(item.amount || 0)
       }))
+
   };
 
 
-  // Run our detection engine
+  // ---- Axis 1: is the CLAIM anomalous? ----
+  // Deterministic, instant, unchanged.
 
   const analysis = analyzeClaim(cleanClaim);
 
 
-  // Store claim + analysis in SQL
+  // ---- Axis 2: is the PROVIDER real? ----
+  //
+  // Agent-driven, therefore slow and fallible. A
+  // verification failure must never block claim
+  // intake, so it degrades to "incomplete" rather
+  // than throwing.
 
-  const savedClaim =
-    createClaim(cleanClaim, analysis);
+  let verification;
+
+  try {
+
+    verification = await verifyProviderCached(cleanClaim);
+
+  } catch (error) {
+
+    verification = {
+      dataConfidenceScore: null,
+      confidenceBand: "incomplete",
+      blocking: false,
+      checks: [],
+      coverage: coverageReport(),
+      rationale:
+        "Provider verification did not complete, so this provider is unverified. " +
+        "That reflects our own failure, not anything about the provider.",
+      error: error.message
+    };
+
+  }
 
 
-  res
-    .status(201)
-    .json(savedClaim);
+  // ---- Compose ----
+
+  const routing = triage(analysis, verification);
+
+
+  // ---- Escalate, if the provider came back unclear ----
+  //
+  // Drafts a call script (or an email) and puts it in
+  // the approval queue. Nothing is sent here — see
+  // verification/outreach.js. A blocking discrepancy never escalates.
+
+  let outreach;
+
+  try {
+
+    outreach = await escalate(cleanClaim, verification);
+
+  } catch (error) {
+
+    outreach = {
+      queued: false,
+      reason: `Outreach could not be evaluated: ${error.message}`
+    };
+
+  }
+
+
+  const savedClaim = createClaim(cleanClaim, analysis);
+
+  res.status(201).json({
+    ...savedClaim,
+    verification,
+    routing,
+    outreach
+  });
+
+});
+
+
+// -------------------------
+// Outreach queue
+//
+// Everything below is a human-in-the-loop control
+// surface. Nothing dials or sends without a named
+// person approving it first.
+// -------------------------
+
+// Everything under /api/outreach requires a token.
+// These routes approve and place telephone calls;
+// they do not run open. See verification/auth.js.
+app.use("/api/outreach", requireOutreachAuth);
+
+
+app.get("/api/outreach", (req, res) => {
+  res.json({
+    policy: {
+      cooldownDays: OUTREACH_POLICY.cooldownMs / (24 * 60 * 60 * 1000),
+      callWindow: OUTREACH_POLICY.callWindow,
+      maxPhoneAttempts: OUTREACH_POLICY.maxPhoneAttempts,
+      escalateBands: [...OUTREACH_POLICY.escalateBands]
+    },
+    items: listOutreach(req.query.status || null)
+  });
+});
+
+
+app.get("/api/outreach/:id", (req, res) => {
+
+  const item = getOutreach(req.params.id);
+
+  if (!item) {
+    return res.status(404).json({ error: "Not found." });
+  }
+
+  res.json(item);
+
+});
+
+
+app.post("/api/outreach/:id/approve", (req, res) => {
+
+  // Deliberately required. An audit trail that records
+  // "system" as the approver is not an audit trail.
+  //
+  // With OUTREACH_OPERATORS configured the name is
+  // derived from the token that authenticated the
+  // request, so the body cannot sign someone else's
+  // name to a call.
+  const { approvedBy } = resolveApprover(req);
+
+  if (!approvedBy) {
+    return res.status(400).json({
+      error: "approvedBy is required — approval must be attributable to a person."
+    });
+  }
+
+  try {
+    res.json(approveOutreach(req.params.id, approvedBy));
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+
+});
+
+
+app.post("/api/outreach/:id/reject", (req, res) => {
+  const { approvedBy } = resolveApprover(req);
+  res.json(
+    rejectOutreach(req.params.id, approvedBy || req.body?.rejectedBy, req.body?.note)
+  );
+});
+
+
+app.post("/api/outreach/:id/dispatch", async (req, res) => {
+
+  try {
+
+    // VAPI_ADAPTER is null unless deliberately armed,
+    // in which case dispatch() is a dry run and
+    // returns the payload that would have gone out.
+    const result = await dispatch(req.params.id, { adapter: VAPI_ADAPTER });
+
+    if (result.dryRun) {
+
+      // A dry run should show what it would have done,
+      // not just say that it did nothing. Runs every
+      // gate except the HTTP call.
+      try {
+        result.wouldHaveSent = previewVapiCall(result.outreach);
+      } catch (error) {
+        result.wouldHaveSent = { blocked: error.message };
+      }
+
+    }
+
+    res.json(result);
+
+  } catch (error) {
+
+    res.status(400).json({ error: error.message });
+
+  }
+
+});
+
+
+app.post("/api/outreach/:id/outcome", (req, res) => {
+
+  try {
+    res.json(
+      recordOutcome(req.params.id, req.body?.outcome, req.body?.note)
+    );
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
 
 });
 
@@ -192,61 +478,45 @@ function validateClaim(claim) {
 
   const errors = [];
 
-
   if (!String(claim.claimNumber || "").trim()) {
-
-    errors.push(
-      "Claim number is required."
-    );
-
+    errors.push("Claim number is required.");
   }
-
 
   if (!String(claim.providerName || "").trim()) {
-
-    errors.push(
-      "Provider name is required."
-    );
-
+    errors.push("Provider name is required.");
   }
 
+  // The NPI stays optional so the demo still runs
+  // without one — but the response will say plainly
+  // that the provider could not be identified.
+  const npi = String(claim.npi || "").replace(/\D/g, "");
+
+  if (npi && npi.length !== 10) {
+    errors.push("NPI must be exactly 10 digits.");
+  }
 
   if (
     !Array.isArray(claim.lineItems) ||
     claim.lineItems.length === 0
   ) {
 
-    errors.push(
-      "At least one line item is required."
-    );
+    errors.push("At least one line item is required.");
 
   } else {
 
-    claim.lineItems.forEach(
-      (item, index) => {
+    claim.lineItems.forEach((item, index) => {
 
-        if (!String(item.code || "").trim()) {
-
-          errors.push(
-            `Line ${index + 1}: procedure code is required.`
-          );
-
-        }
-
-
-        if (!(Number(item.amount) >= 0)) {
-
-          errors.push(
-            `Line ${index + 1}: amount must be a number.`
-          );
-
-        }
-
+      if (!String(item.code || "").trim()) {
+        errors.push(`Line ${index + 1}: procedure code is required.`);
       }
-    );
+
+      if (!(Number(item.amount) >= 0)) {
+        errors.push(`Line ${index + 1}: amount must be a number.`);
+      }
+
+    });
 
   }
-
 
   return errors;
 
@@ -259,8 +529,29 @@ function validateClaim(claim) {
 
 app.listen(PORT, () => {
 
+  const coverage = coverageReport();
+
+  console.log(`Claim Integrity running at http://localhost:${PORT}`);
+  console.log(`Verifiers live: ${coverage.checked.join(", ") || "none"}`);
+  console.log(`Coverage: ${Math.round(coverage.completeness * 100)}%`);
+
   console.log(
-    `Claim Integrity running at http://localhost:${PORT}`
+    `Outreach dispatch: ${
+      VAPI_ADAPTER
+        ? `VAPI ADAPTER ARMED (target mode: ${process.env.VAPI_TARGET_MODE || "demo"}, ` +
+          `DEMO_AUTO_CALL=${process.env.DEMO_AUTO_CALL === "true" ? "true" : "false"})`
+        : "dry run — no adapter wired"
+    }`
+  );
+
+  console.log(
+    `Outreach auth: ${
+      process.env.OUTREACH_OPERATORS
+        ? "named operator tokens"
+        : process.env.OUTREACH_SHARED_SECRET
+          ? "shared secret"
+          : "UNCONFIGURED — /api/outreach will refuse every request"
+    }`
   );
 
 });
