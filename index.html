@@ -1,0 +1,488 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>
+    Claim Integrity — DNHacks
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="/website/style.css"
+  />
+
+</head>
+
+
+<body>
+
+
+  <!-- =============================================
+       HEADER
+  ============================================== -->
+
+  <header class="topbar">
+
+    <div>
+
+      <p class="eyebrow">
+        DNHACKS • CLAIM INTEGRITY
+      </p>
+
+      <h1>
+        AI-assisted billing anomaly detector
+      </h1>
+
+      <p class="subhead">
+        Surface claims that deserve human review —
+        without labeling fraud.
+      </p>
+
+    </div>
+
+
+    <button
+      id="demoBtn"
+      class="secondary"
+    >
+      Load demo claim
+    </button>
+
+  </header>
+
+
+
+  <main>
+
+
+    <!-- =============================================
+         DASHBOARD STATISTICS
+    ============================================== -->
+
+    <section
+      class="stats"
+      id="stats"
+    >
+
+      <article>
+
+        <span>
+          Claims analyzed
+        </span>
+
+        <strong id="claimsAnalyzed">
+          0
+        </strong>
+
+      </article>
+
+
+      <article>
+
+        <span>
+          Claims flagged
+        </span>
+
+        <strong id="claimsFlagged">
+          0
+        </strong>
+
+      </article>
+
+
+      <article>
+
+        <span>
+          Potential review $
+        </span>
+
+        <strong id="reviewAmount">
+          $0
+        </strong>
+
+      </article>
+
+
+      <article>
+
+        <span>
+          Duplicate flags
+        </span>
+
+        <strong id="duplicateFlags">
+          0
+        </strong>
+
+      </article>
+
+    </section>
+
+
+
+    <!-- =============================================
+         MAIN CLAIM ANALYSIS AREA
+    ============================================== -->
+
+    <section class="grid">
+
+
+      <!-- ===========================================
+           CLAIM FORM
+      ============================================ -->
+
+      <div class="panel form-panel">
+
+
+        <div class="panel-title">
+
+          <div>
+
+            <p class="eyebrow">
+              NEW ANALYSIS
+            </p>
+
+            <h2>
+              Analyze one claim
+            </h2>
+
+          </div>
+
+
+          <span class="pill">
+            Rules engine MVP
+          </span>
+
+        </div>
+
+
+
+        <form id="claimForm">
+
+
+          <div class="two-col">
+
+
+            <label>
+
+              Claim number
+
+              <input
+                id="claimNumber"
+                required
+                placeholder="CLM-10429"
+              />
+
+            </label>
+
+
+            <label>
+
+              Provider
+
+              <input
+                id="providerName"
+                required
+                placeholder="Northside Medical Center"
+              />
+
+            </label>
+
+
+          </div>
+
+
+
+          <div class="two-col">
+
+
+            <label>
+
+              Patient label
+
+              <span>
+                (de-identified)
+              </span>
+
+              <input
+                id="patientLabel"
+                placeholder="Patient A"
+              />
+
+            </label>
+
+
+            <label>
+
+              Diagnosis codes
+
+              <span>
+                (comma separated)
+              </span>
+
+              <input
+                id="diagnosisCodes"
+                placeholder="R10.9, R11.0"
+              />
+
+            </label>
+
+
+          </div>
+
+
+
+          <label>
+
+            Clinical note
+
+            <textarea
+              id="clinicalNote"
+              rows="4"
+              placeholder="Paste a de-identified clinical note..."
+            ></textarea>
+
+          </label>
+
+
+
+          <!-- =======================================
+               CLAIM LINE ITEMS
+          ======================================== -->
+
+          <div class="line-header">
+
+            <h3>
+              Claim line items
+            </h3>
+
+
+            <button
+              type="button"
+              id="addLineBtn"
+              class="text-btn"
+            >
+              + Add line
+            </button>
+
+          </div>
+
+
+          <div
+            id="lineItems"
+            class="line-items"
+          ></div>
+
+
+
+          <div
+            id="formError"
+            class="error hidden"
+          ></div>
+
+
+
+          <button
+            class="primary"
+            type="submit"
+          >
+            Analyze claim →
+          </button>
+
+
+        </form>
+
+
+      </div>
+
+
+
+      <!-- ===========================================
+           RESULT PANEL
+      ============================================ -->
+
+      <aside
+        class="panel result-panel"
+        id="resultPanel"
+      >
+
+
+        <p class="eyebrow">
+          LATEST RESULT
+        </p>
+
+
+
+        <div
+          id="emptyResult"
+          class="empty"
+        >
+
+
+          <div class="empty-icon">
+            ◎
+          </div>
+
+
+          <h2>
+            No claim analyzed yet
+          </h2>
+
+
+          <p>
+            Run an analysis to see evidence,
+            risk signals, and the amount
+            recommended for review.
+          </p>
+
+
+        </div>
+
+
+
+        <div
+          id="resultContent"
+          class="hidden"
+        ></div>
+
+
+      </aside>
+
+
+    </section>
+
+
+
+    <!-- =============================================
+         LIVE CLAIM DASHBOARD
+    ============================================== -->
+
+    <section
+      class="panel dashboard-panel"
+    >
+
+
+      <div class="panel-title">
+
+
+        <div>
+
+          <p class="eyebrow">
+            LIVE DASHBOARD
+          </p>
+
+          <h2>
+            Recent claim analyses
+          </h2>
+
+        </div>
+
+
+
+        <span class="live-dot">
+
+          <i></i>
+
+          updates automatically
+
+        </span>
+
+
+      </div>
+
+
+
+      <div class="table-wrap">
+
+
+        <table>
+
+
+          <thead>
+
+            <tr>
+
+              <th>
+                Claim
+              </th>
+
+              <th>
+                Provider
+              </th>
+
+              <th>
+                Billed
+              </th>
+
+              <th>
+                Risk
+              </th>
+
+              <th>
+                Review $
+              </th>
+
+              <th>
+                Flags
+              </th>
+
+            </tr>
+
+          </thead>
+
+
+
+          <tbody id="claimsTable">
+
+            <tr>
+
+              <td
+                colspan="6"
+                class="muted"
+              >
+                No claims yet.
+              </td>
+
+            </tr>
+
+          </tbody>
+
+
+        </table>
+
+
+      </div>
+
+
+    </section>
+
+
+  </main>
+
+
+
+  <footer>
+
+    Screening support only.
+
+    Flags indicate anomalies for human review,
+    not fraud or coverage determinations.
+
+  </footer>
+
+
+
+  <script src="/website/script.js"></script>
+
+
+</body>
+
+</html>

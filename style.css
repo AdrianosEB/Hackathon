@@ -1,0 +1,1107 @@
+:root {
+
+  --bg: #0b0d10;
+
+  --panel: #12161b;
+
+  --panel2: #171c22;
+
+  --text: #f4f7fb;
+
+  --muted: #99a3b0;
+
+  --line: #27303a;
+
+  --green: #9ef2bf;
+
+  --yellow: #ffd98a;
+
+  --red: #ff9d9d;
+
+  --blue: #9cc8ff;
+
+}
+
+
+/* =============================================
+   RESET
+============================================= */
+
+* {
+
+  box-sizing: border-box;
+
+}
+
+
+body {
+
+  margin: 0;
+
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  background:
+
+    radial-gradient(
+      circle at 10% 0%,
+      #17202a,
+      transparent 28%
+    ),
+
+    var(--bg);
+
+  color:
+    var(--text);
+
+}
+
+
+/* =============================================
+   PAGE WIDTH
+============================================= */
+
+.topbar,
+main,
+footer {
+
+  width:
+    min(
+      1180px,
+      calc(100% - 36px)
+    );
+
+  margin:
+    auto;
+
+}
+
+
+/* =============================================
+   HEADER
+============================================= */
+
+.topbar {
+
+  display:
+    flex;
+
+  justify-content:
+    space-between;
+
+  gap:
+    24px;
+
+  align-items:
+    end;
+
+  padding:
+    46px 0 30px;
+
+}
+
+
+h1 {
+
+  font-size:
+    clamp(
+      32px,
+      5vw,
+      58px
+    );
+
+  line-height:
+    1;
+
+  letter-spacing:
+    -0.045em;
+
+  margin:
+    6px 0 12px;
+
+  max-width:
+    800px;
+
+}
+
+
+h2 {
+
+  margin:
+    4px 0 0;
+
+  font-size:
+    22px;
+
+  letter-spacing:
+    -0.02em;
+
+}
+
+
+h3 {
+
+  margin:
+    0;
+
+  font-size:
+    14px;
+
+}
+
+
+.subhead,
+.muted,
+label span {
+
+  color:
+    var(--muted);
+
+}
+
+
+.eyebrow {
+
+  color:
+    #b7c4d4;
+
+  font-size:
+    11px;
+
+  font-weight:
+    800;
+
+  letter-spacing:
+    0.16em;
+
+  margin:
+    0;
+
+}
+
+
+/* =============================================
+   DASHBOARD CARDS
+============================================= */
+
+.stats {
+
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      1fr
+    );
+
+  gap:
+    12px;
+
+  margin-bottom:
+    12px;
+
+}
+
+
+.stats article,
+.panel {
+
+  border:
+    1px solid var(--line);
+
+  background:
+    rgba(
+      18,
+      22,
+      27,
+      0.94
+    );
+
+  border-radius:
+    18px;
+
+}
+
+
+.stats article {
+
+  padding:
+    18px;
+
+}
+
+
+.stats span {
+
+  display:
+    block;
+
+  color:
+    var(--muted);
+
+  font-size:
+    12px;
+
+  margin-bottom:
+    7px;
+
+}
+
+
+.stats strong {
+
+  font-size:
+    28px;
+
+  letter-spacing:
+    -0.04em;
+
+}
+
+
+/* =============================================
+   MAIN GRID
+============================================= */
+
+.grid {
+
+  display:
+    grid;
+
+  grid-template-columns:
+    1.35fr 0.85fr;
+
+  gap:
+    12px;
+
+  align-items:
+    start;
+
+}
+
+
+.panel {
+
+  padding:
+    22px;
+
+}
+
+
+.panel-title {
+
+  display:
+    flex;
+
+  justify-content:
+    space-between;
+
+  gap:
+    16px;
+
+  align-items:
+    center;
+
+  margin-bottom:
+    20px;
+
+}
+
+
+.pill {
+
+  font-size:
+    11px;
+
+  color:
+    var(--blue);
+
+  border:
+    1px solid #28486b;
+
+  background:
+    #101e2d;
+
+  border-radius:
+    999px;
+
+  padding:
+    7px 10px;
+
+}
+
+
+/* =============================================
+   FORM
+============================================= */
+
+form {
+
+  display:
+    grid;
+
+  gap:
+    14px;
+
+}
+
+
+.two-col {
+
+  display:
+    grid;
+
+  grid-template-columns:
+    1fr 1fr;
+
+  gap:
+    12px;
+
+}
+
+
+label {
+
+  font-size:
+    12px;
+
+  color:
+    #cbd4df;
+
+  font-weight:
+    650;
+
+  display:
+    grid;
+
+  gap:
+    7px;
+
+}
+
+
+input,
+textarea {
+
+  width:
+    100%;
+
+  border:
+    1px solid var(--line);
+
+  background:
+    #0d1115;
+
+  color:
+    var(--text);
+
+  border-radius:
+    10px;
+
+  padding:
+    12px 13px;
+
+  outline:
+    none;
+
+  font:
+    inherit;
+
+}
+
+
+input:focus,
+textarea:focus {
+
+  border-color:
+    #55708f;
+
+}
+
+
+textarea {
+
+  resize:
+    vertical;
+
+}
+
+
+/* =============================================
+   CLAIM LINES
+============================================= */
+
+.line-header {
+
+  display:
+    flex;
+
+  justify-content:
+    space-between;
+
+  align-items:
+    center;
+
+  margin-top:
+    2px;
+
+}
+
+
+.line-items {
+
+  display:
+    grid;
+
+  gap:
+    8px;
+
+}
+
+
+.line-item {
+
+  display:
+    grid;
+
+  grid-template-columns:
+    1fr 1.4fr 0.9fr 0.65fr 0.8fr auto;
+
+  gap:
+    8px;
+
+  align-items:
+    end;
+
+  padding:
+    10px;
+
+  border:
+    1px solid var(--line);
+
+  border-radius:
+    12px;
+
+  background:
+    #0e1217;
+
+}
+
+
+.line-item label {
+
+  font-size:
+    10px;
+
+}
+
+
+.line-item input {
+
+  padding:
+    9px;
+
+  font-size:
+    12px;
+
+}
+
+
+/* =============================================
+   BUTTONS
+============================================= */
+
+button {
+
+  border:
+    0;
+
+  border-radius:
+    10px;
+
+  font:
+    inherit;
+
+  font-weight:
+    750;
+
+  cursor:
+    pointer;
+
+}
+
+
+.primary {
+
+  background:
+    var(--text);
+
+  color:
+    #0b0d10;
+
+  padding:
+    13px 16px;
+
+}
+
+
+.secondary {
+
+  color:
+    var(--text);
+
+  background:
+    #1a2027;
+
+  border:
+    1px solid var(--line);
+
+  padding:
+    11px 14px;
+
+}
+
+
+.text-btn {
+
+  color:
+    var(--blue);
+
+  background:
+    transparent;
+
+  padding:
+    4px;
+
+}
+
+
+.remove-btn {
+
+  color:
+    #ffb5b5;
+
+  background:
+    transparent;
+
+  padding:
+    9px;
+
+}
+
+
+/* =============================================
+   RESULT PANEL
+============================================= */
+
+.result-panel {
+
+  min-height:
+    520px;
+
+  position:
+    sticky;
+
+  top:
+    12px;
+
+}
+
+
+.empty {
+
+  min-height:
+    400px;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  justify-content:
+    center;
+
+  text-align:
+    center;
+
+  align-items:
+    center;
+
+  color:
+    var(--muted);
+
+  padding:
+    20px;
+
+}
+
+
+.empty h2 {
+
+  color:
+    var(--text);
+
+}
+
+
+.empty-icon {
+
+  font-size:
+    42px;
+
+  margin-bottom:
+    10px;
+
+}
+
+
+.hidden {
+
+  display:
+    none !important;
+
+}
+
+
+/* =============================================
+   SCORE
+============================================= */
+
+.score-row {
+
+  display:
+    flex;
+
+  justify-content:
+    space-between;
+
+  align-items:
+    center;
+
+  gap:
+    16px;
+
+  border-bottom:
+    1px solid var(--line);
+
+  padding-bottom:
+    18px;
+
+  margin-bottom:
+    18px;
+
+}
+
+
+.score {
+
+  font-size:
+    48px;
+
+  font-weight:
+    850;
+
+  letter-spacing:
+    -0.06em;
+
+}
+
+
+.risk-badge {
+
+  border-radius:
+    999px;
+
+  padding:
+    7px 10px;
+
+  font-size:
+    11px;
+
+  font-weight:
+    800;
+
+  text-transform:
+    uppercase;
+
+}
+
+
+.risk-low {
+
+  color:
+    var(--green);
+
+  background:
+    #11251a;
+
+}
+
+
+.risk-review {
+
+  color:
+    var(--yellow);
+
+  background:
+    #2a2213;
+
+}
+
+
+.risk-high {
+
+  color:
+    var(--red);
+
+  background:
+    #2b1515;
+
+}
+
+
+/* =============================================
+   RESULT METADATA
+============================================= */
+
+.result-meta {
+
+  display:
+    grid;
+
+  grid-template-columns:
+    1fr 1fr;
+
+  gap:
+    8px;
+
+  margin:
+    16px 0 22px;
+
+}
+
+
+.result-meta div {
+
+  background:
+    #0d1115;
+
+  border-radius:
+    10px;
+
+  padding:
+    12px;
+
+}
+
+
+.result-meta span {
+
+  display:
+    block;
+
+  color:
+    var(--muted);
+
+  font-size:
+    10px;
+
+  margin-bottom:
+    5px;
+
+}
+
+
+/* =============================================
+   FLAGS
+============================================= */
+
+.flags {
+
+  display:
+    grid;
+
+  gap:
+    9px;
+
+}
+
+
+.flag {
+
+  border:
+    1px solid var(--line);
+
+  border-radius:
+    12px;
+
+  padding:
+    12px;
+
+  background:
+    #0d1115;
+
+}
+
+
+.flag strong {
+
+  font-size:
+    13px;
+
+}
+
+
+.flag p {
+
+  color:
+    var(--muted);
+
+  font-size:
+    12px;
+
+  margin:
+    6px 0 0;
+
+  line-height:
+    1.45;
+
+}
+
+
+.flag .severity {
+
+  font-size:
+    9px;
+
+  text-transform:
+    uppercase;
+
+  letter-spacing:
+    0.08em;
+
+  margin-left:
+    7px;
+
+}
+
+
+/* =============================================
+   DASHBOARD TABLE
+============================================= */
+
+.dashboard-panel {
+
+  margin-top:
+    12px;
+
+}
+
+
+.live-dot {
+
+  color:
+    var(--muted);
+
+  font-size:
+    11px;
+
+}
+
+
+.live-dot i {
+
+  display:
+    inline-block;
+
+  width:
+    7px;
+
+  height:
+    7px;
+
+  background:
+    var(--green);
+
+  border-radius:
+    50%;
+
+  margin-right:
+    5px;
+
+  box-shadow:
+    0 0 0 4px rgba(
+      158,
+      242,
+      191,
+      0.09
+    );
+
+}
+
+
+.table-wrap {
+
+  overflow:
+    auto;
+
+}
+
+
+table {
+
+  width:
+    100%;
+
+  border-collapse:
+    collapse;
+
+  font-size:
+    13px;
+
+}
+
+
+th {
+
+  color:
+    var(--muted);
+
+  font-size:
+    10px;
+
+  text-transform:
+    uppercase;
+
+  letter-spacing:
+    0.08em;
+
+  text-align:
+    left;
+
+  padding:
+    11px 10px;
+
+  border-bottom:
+    1px solid var(--line);
+
+}
+
+
+td {
+
+  padding:
+    13px 10px;
+
+  border-bottom:
+    1px solid #20262d;
+
+}
+
+
+/* =============================================
+   ERRORS
+============================================= */
+
+.error {
+
+  color:
+    #ffb9b9;
+
+  background:
+    #2b1515;
+
+  border:
+    1px solid #5a2929;
+
+  padding:
+    10px 12px;
+
+  border-radius:
+    10px;
+
+  font-size:
+    12px;
+
+}
+
+
+/* =============================================
+   FOOTER
+============================================= */
+
+footer {
+
+  color:
+    var(--muted);
+
+  font-size:
+    11px;
+
+  padding:
+    24px 0 38px;
+
+}
+
+
+/* =============================================
+   MOBILE
+============================================= */
+
+@media (max-width: 850px) {
+
+  .grid,
+  .stats {
+
+    grid-template-columns:
+      1fr;
+
+  }
+
+
+  .stats {
+
+    grid-template-columns:
+      1fr 1fr;
+
+  }
+
+
+  .topbar {
+
+    align-items:
+      start;
+
+    flex-direction:
+      column;
+
+  }
+
+
+  .result-panel {
+
+    position:
+      static;
+
+    min-height:
+      0;
+
+  }
+
+
+  .line-item {
+
+    grid-template-columns:
+      1fr 1fr;
+
+  }
+
+}
