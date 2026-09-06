@@ -3,30 +3,39 @@ import "dotenv/config";
 import express from "express";
 
 import {
-  analyzeClaim
-} from "./analyzer.js";
+  orchestrateClaim
+} from "./orchestration/claim-orchestrator.js";
 
 import {
-  reviewClaimWithAI
-} from "./ai-reviewer.js";
+  orchestrateAppeal
+} from "./orchestration/appeal-orchestrator.js";
 
 import {
-  analyzeAppeal
-} from "./appeal-analyzer.js";
-
-import {
-  reviewAppealWithAI
-} from "./appeal-ai-reviewer.js";
-
-import {
-  queueVapiCall,
   getVapiQueueStatus
 } from "./vapi.js";
+
+// ---- axis two: the provider record ----
+//
+// Deliberately a separate layer. It can be switched off entirely
+// by env and claims still get assessed — a verification failure
+// must never block intake.
+import {
+  verifyProviderCached,
+  coverageReport,
+  migrateClaimsTable,
+  triage
+} from "./verification/index.js";
+
+import {
+  orchestrateProviderCall,
+  normalizeTranscript
+} from "./orchestration/call-orchestrator.js";
 
 import {
   createClaim,
   getClaim,
   listClaims,
+  saveClaimVerification,
   getDashboardStats,
   getProviderRiskStats,
 
@@ -43,6 +52,25 @@ import {
   completeVapiCall,
   getVapiCallsForClaim
 } from "./db.js";
+
+
+// =============================================
+// Call persistence
+//
+// Injected into the call orchestrator so the
+// orchestration layer stays free of database
+// imports and can be exercised against a fake.
+// =============================================
+
+const VAPI_CALL_STORE = {
+
+  createVapiCall,
+
+  updateVapiCallStatus,
+
+  completeVapiCall
+
+};
 
 
 // =============================================
@@ -77,232 +105,45 @@ app.use(
 );
 
 
-// =============================================
-// Risk helper
-// =============================================
-
-function deriveRiskLevelFromFlags(
-  flags = []
-) {
-
-  if (
-    flags.some(
-      (flag) =>
-        flag.severity ===
-        "high"
-    )
-  ) {
-
-    return "high";
-
-  }
-
-
-  if (
-    flags.some(
-      (flag) =>
-        flag.severity ===
-        "medium"
-    )
-  ) {
-
-    return "review";
-
-  }
-
-
-  return "low";
-
-}
-
-
-// =============================================
-// Normalize AI finding
-// =============================================
-
-function normalizeAiFinding(
-  finding
-) {
-
-  return {
-
-    lineCode:
-      finding.lineCode ||
-      "",
-
-    severity:
-      finding.severity ||
-      "medium",
-
-    type:
-      finding.reason ||
-      "needs_review",
-
-    message:
-      finding.message ||
-      "",
-
-    evidence:
-      finding.evidence ||
-      "",
-
-    detectedBy:
-      ["ai"],
-
-    aiReview: {
-
-      severity:
-        finding.severity ||
-        "medium",
-
-      reason:
-        finding.reason ||
-        "needs_review",
-
-      message:
-        finding.message ||
-        "",
-
-      evidence:
-        finding.evidence ||
-        ""
-
-    }
-
-  };
-
-}
-
-
-// =============================================
-// Merge claim Rules + AI findings
-// =============================================
-
-function mergeAiFindings(
-  analysis,
-  aiReview
-) {
-
-  if (
-    !aiReview?.available
-  ) {
-
-    return;
-
-  }
-
-
-  const aiFindings =
-
-    Array.isArray(
-      aiReview.findings
-    )
-
-      ? aiReview.findings
-
-      : [];
-
-
-  for (
-    const aiFinding
-    of aiFindings
-  ) {
-
-    const matchingFlag =
-      analysis.flags.find(
-        (flag) =>
-
-          flag.lineCode &&
-
-          aiFinding.lineCode &&
-
-          flag.lineCode ===
-            aiFinding.lineCode
-      );
-
-
-    if (
-      matchingFlag
-    ) {
-
-      if (
-        !Array.isArray(
-          matchingFlag.detectedBy
-        )
-      ) {
-
-        matchingFlag.detectedBy =
-          ["rules"];
-
-      }
-
-
-      if (
-        !matchingFlag.detectedBy.includes(
-          "ai"
-        )
-      ) {
-
-        matchingFlag.detectedBy.push(
-          "ai"
-        );
-
-      }
-
-
-      matchingFlag.aiReview = {
-
-        severity:
-          aiFinding.severity,
-
-        reason:
-          aiFinding.reason,
-
-        message:
-          aiFinding.message,
-
-        evidence:
-          aiFinding.evidence
-
-      };
-
-
-      if (
-        aiFinding.severity ===
-        "high"
-      ) {
-
-        matchingFlag.severity =
-          "high";
-
-      } else if (
-        aiFinding.severity ===
-          "medium" &&
-
-        matchingFlag.severity !==
-          "high"
-      ) {
-
-        matchingFlag.severity =
-          "medium";
-
-      }
-
-
-      continue;
-
-    }
-
-
-    analysis.flags.push(
-      normalizeAiFinding(
-        aiFinding
-      )
+// The demo fixtures, so the interface can offer the same claim CSVs
+// and appeal letters the CLI examples use. Read-only static files.
+app.use(
+  "/demo",
+  express.static(
+    "demo"
+  )
+);
+
+app.use(
+  "/demo_appeal",
+  express.static(
+    "demo_appeal"
+  )
+);
+
+
+// The provider-axis columns are added to the claims table here
+// rather than in the schema, so a database written before axis two
+// existed still opens and reads correctly.
+migrateClaimsTable();
+
+
+// The scroll narrative. Same API, same fixtures — a different way
+// through claims, appeals and the evidence behind both.
+app.get(
+  "/story",
+  (
+    req,
+    res
+  ) => {
+
+    res.sendFile(
+      "story.html",
+      { root: "website" }
     );
 
   }
-
-}
+);
 
 
 // =============================================
@@ -432,6 +273,47 @@ function normalizeIncomingClaim(
     providerName:
       String(
         claim.providerName ||
+        ""
+      ).trim(),
+
+    // ---- provider identity, for axis two ----
+    //
+    // All optional. Without an NPI the provider can only be
+    // guessed at by name, and provider names are not unique — the
+    // verification result says exactly that.
+    npi:
+      String(
+        claim.npi ||
+        ""
+      ).replace(/\D/g, ""),
+
+    practiceAddressLine1:
+      String(
+        claim.practiceAddressLine1 ||
+        ""
+      ).trim(),
+
+    practiceCity:
+      String(
+        claim.practiceCity ||
+        ""
+      ).trim(),
+
+    practiceState:
+      String(
+        claim.practiceState ||
+        ""
+      ).trim().toUpperCase(),
+
+    practicePhone:
+      String(
+        claim.practicePhone ||
+        ""
+      ).trim(),
+
+    practiceWebsite:
+      String(
+        claim.practiceWebsite ||
         ""
       ).trim(),
 
@@ -747,268 +629,6 @@ function validateAppeal(
 
 
 // =============================================
-// Final appeal outcome
-//
-// RULES and AI remain independent reviewers.
-//
-// Dashboard mapping:
-//
-// resolved
-// -> COMPLETED
-//
-// partially_resolved
-// -> PENDING
-//
-// not_resolved
-// -> PENDING
-//
-// IMPORTANT:
-//
-// A deterministic contradiction that remains should
-// not be completely cleared merely because AI says
-// resolved.
-// =============================================
-
-function deriveFinalAppealOutcome(
-  rulesReview,
-  aiReview
-) {
-
-  const rulesOutcome =
-    rulesReview?.outcome ||
-    "not_resolved";
-
-
-  // ===========================================
-  // If OpenAI is unavailable, deterministic
-  // appeal review still works.
-  // ===========================================
-
-  if (
-    !aiReview?.available
-  ) {
-
-    return rulesOutcome;
-
-  }
-
-
-  const aiOutcome =
-    aiReview.outcome ||
-    "not_resolved";
-
-
-  // ===========================================
-  // Both reviewers fully resolved everything.
-  // ===========================================
-
-  if (
-    rulesOutcome ===
-      "resolved" &&
-
-    aiOutcome ===
-      "resolved"
-  ) {
-
-    return "resolved";
-
-  }
-
-
-  // ===========================================
-  // Deterministic contradiction remains.
-  //
-  // If AI says fully resolved, that means there
-  // was meaningful appeal evidence, but an
-  // objective Rules condition still remains.
-  //
-  // Therefore the best final result is partial.
-  // ===========================================
-
-  if (
-    rulesOutcome ===
-      "not_resolved"
-  ) {
-
-    if (
-      aiOutcome ===
-      "resolved"
-    ) {
-
-      return "partially_resolved";
-
-    }
-
-
-    if (
-      aiOutcome ===
-      "partially_resolved"
-    ) {
-
-      return "not_resolved";
-
-    }
-
-
-    return "not_resolved";
-
-  }
-
-
-  // ===========================================
-  // Rules found meaningful partial correction.
-  // The overall appeal cannot be completed yet.
-  // ===========================================
-
-  if (
-    rulesOutcome ===
-      "partially_resolved"
-  ) {
-
-    return "partially_resolved";
-
-  }
-
-
-  // ===========================================
-  // Rules are completely resolved.
-  //
-  // AI determines whether original evidentiary
-  // concerns remain.
-  // ===========================================
-
-  if (
-    rulesOutcome ===
-      "resolved"
-  ) {
-
-    if (
-      aiOutcome ===
-      "partially_resolved"
-    ) {
-
-      return "partially_resolved";
-
-    }
-
-
-    if (
-      aiOutcome ===
-      "not_resolved"
-    ) {
-
-      return "not_resolved";
-
-    }
-
-
-    return "resolved";
-
-  }
-
-
-  return "not_resolved";
-
-}
-
-
-// =============================================
-// Normalize Vapi transcript
-// =============================================
-
-function normalizeTranscript(
-  rawTranscript
-) {
-
-  if (
-    !rawTranscript
-  ) {
-
-    return "";
-
-  }
-
-
-  if (
-    typeof rawTranscript ===
-    "string"
-  ) {
-
-    return rawTranscript;
-
-  }
-
-
-  if (
-    Array.isArray(
-      rawTranscript
-    )
-  ) {
-
-    return rawTranscript
-      .map(
-        (entry) => {
-
-          const speaker =
-
-            entry.role ===
-              "assistant"
-
-              ? "Assistant"
-
-              : entry.role ===
-                  "user"
-
-                ? "Customer"
-
-                : entry.role ||
-                  "Speaker";
-
-
-          const content =
-
-            entry.message ||
-
-            entry.content ||
-
-            entry.text ||
-
-            "";
-
-
-          return (
-            `${speaker}: ${content}`
-          );
-
-        }
-      )
-      .join(
-        "\n"
-      );
-
-  }
-
-
-  try {
-
-    return JSON.stringify(
-      rawTranscript,
-      null,
-      2
-    );
-
-  } catch {
-
-    return String(
-      rawTranscript
-    );
-
-  }
-
-}
-
-
-// =============================================
 // Dashboard
 // =============================================
 
@@ -1176,6 +796,39 @@ app.get(
 );
 
 
+// The claim axis and the provider axis were written against
+// different words for the same three steps. Nothing downstream
+// depends on this beyond triage().
+const CLAIM_AXIS_LEVEL = {
+  low: "routine",
+  review: "review",
+  high: "priority"
+};
+
+
+// =============================================
+// Verification coverage
+//
+// Which provider checks are actually live. The interface reads
+// this so it can say what it did not check, rather than implying
+// a clean result covered everything.
+// =============================================
+
+app.get(
+  "/api/verification/coverage",
+  (
+    req,
+    res
+  ) => {
+
+    res.json(
+      coverageReport()
+    );
+
+  }
+);
+
+
 // =============================================
 // Analyze claim
 // =============================================
@@ -1219,174 +872,26 @@ app.post(
       }
 
 
-      console.log(
-        `Analyzing claim ${cleanClaim.claimNumber}...`
-      );
-
-
       // =======================================
-      // RULES
+      // ORCHESTRATION
+      //
+      // Deterministic rules, AI evidence review,
+      // the merge, and the routing decision all
+      // live in the claim orchestrator.
       // =======================================
 
-      const analysis =
-        analyzeClaim(
+      const decision =
+        await orchestrateClaim(
           cleanClaim
         );
 
 
-      analysis.flags =
-
-        Array.isArray(
-          analysis.flags
-        )
-
-          ? analysis.flags.map(
-              (flag) => ({
-
-                ...flag,
-
-                detectedBy:
-
-                  Array.isArray(
-                    flag.detectedBy
-                  )
-
-                    ? flag.detectedBy
-
-                    : ["rules"]
-
-              })
-            )
-
-          : [];
-
-
-      const rulesRiskLevel =
-        deriveRiskLevelFromFlags(
-          analysis.flags
-        );
-
-
-      // =======================================
-      // AI
-      // =======================================
-
-      let aiReview = {
-
-        available:
-          false,
-
-        findings:
-          []
-
-      };
-
-
-      try {
-
-        console.log(
-          `Running AI review for claim ${cleanClaim.claimNumber}...`
-        );
-
-
-        aiReview =
-          await reviewClaimWithAI(
-            cleanClaim
-          );
-
-
-        if (
-          aiReview.available
-        ) {
-
-          console.log(
-            `AI review complete. ${
-              aiReview.findings
-                ?.length ||
-              0
-            } finding(s).`
-          );
-
-        }
-
-      } catch (
-        error
-      ) {
-
-        console.error(
-          "AI review error:",
-          error.message
-        );
-
-
-        aiReview = {
-
-          available:
-            false,
-
-          findings:
-            [],
-
-          error:
-            error.message
-
-        };
-
-      }
-
-
-      const aiRiskLevel =
-
-        aiReview.available
-
-          ? deriveRiskLevelFromFlags(
-              aiReview.findings ||
-              []
-            )
-
-          : "unavailable";
-
-
-      // =======================================
-      // MERGE CLAIM RULES + AI
-      // =======================================
-
-      mergeAiFindings(
-        analysis,
-        aiReview
-      );
+      const analysis =
+        decision.analysis;
 
 
       const finalRiskLevel =
-        deriveRiskLevelFromFlags(
-          analysis.flags
-        );
-
-
-      analysis.rulesRiskLevel =
-        rulesRiskLevel;
-
-
-      analysis.aiRiskLevel =
-        aiRiskLevel;
-
-
-      analysis.riskLevel =
-        finalRiskLevel;
-
-
-      analysis.aiAvailable =
-        aiReview.available ===
-        true;
-
-
-      analysis.analysisMode =
-
-        aiReview.available
-
-          ? "hybrid"
-
-          : "rules";
+        decision.verdict.riskLevel;
 
 
       // =======================================
@@ -1406,248 +911,109 @@ app.post(
 
 
       // =======================================
-      // REVIEW + HIGH ENTER VAPI QUEUE
+      // AXIS TWO — THE PROVIDER RECORD
+      //
+      // Deliberately after the claim is saved. This
+      // is the slow, fallible half: it talks to the
+      // federal registry through an agent panel. A
+      // failure here degrades to "incomplete" and
+      // must never lose the claim.
+      //
+      // The two axes are kept apart on purpose. How
+      // much of a claim's own content needs a look,
+      // and how well a provider record matches the
+      // registry, are different questions — and
+      // answering them together is how a coding
+      // error turns into an accusation.
       // =======================================
 
-      const shouldCall =
+      let verification;
 
-        finalRiskLevel ===
-          "review" ||
+      try {
 
-        finalRiskLevel ===
-          "high";
-
-
-      if (
-        shouldCall
-      ) {
-
-        const queueResult =
-          queueVapiCall(
-
-            cleanClaim,
-
-            analysis.flags,
-
-            {
-
-              // =================================
-              // CALL STARTED
-              // =================================
-
-              onStarted:
-                async (
-                  result
-                ) => {
-
-                  console.log(
-                    `Clarification call started for ${cleanClaim.claimNumber}`
-                  );
-
-
-                  try {
-
-                    createVapiCall(
-
-                      cleanClaim
-                        .claimNumber,
-
-                      result.callId,
-
-                      result.status ||
-                        "created"
-
-                    );
-
-                  } catch (
-                    databaseError
-                  ) {
-
-                    console.error(
-                      "Could not save Vapi call:",
-                      databaseError.message
-                    );
-
-                  }
-
-                },
-
-
-              // =================================
-              // POLLING UPDATE
-              // =================================
-
-              onUpdate:
-                async (
-                  call
-                ) => {
-
-                  try {
-
-                    updateVapiCallStatus(
-
-                      call.id,
-
-                      call.status ||
-                        "in-progress"
-
-                    );
-
-                  } catch (
-                    databaseError
-                  ) {
-
-                    console.error(
-                      "Could not update Vapi call:",
-                      databaseError.message
-                    );
-
-                  }
-
-                },
-
-
-              // =================================
-              // CALL COMPLETED
-              // =================================
-
-              onCompleted:
-                async (
-                  call
-                ) => {
-
-                  try {
-
-                    const rawTranscript =
-
-                      call.artifact
-                        ?.transcript ||
-
-                      call.transcript ||
-
-                      "";
-
-
-                    const transcript =
-                      normalizeTranscript(
-                        rawTranscript
-                      );
-
-
-                    const messages =
-
-                      call.artifact
-                        ?.messages ||
-
-                      call.messages ||
-
-                      [];
-
-
-                    completeVapiCall(
-                      call.id,
-                      {
-
-                        status:
-                          call.status ||
-                          "ended",
-
-                        endedReason:
-                          call.endedReason ||
-                          null,
-
-                        transcript,
-
-                        messages,
-
-                        startedAt:
-                          call.startedAt ||
-                          null,
-
-                        endedAt:
-                          call.endedAt ||
-                          null
-
-                      }
-                    );
-
-
-                    console.log(
-                      `Clarification call completed for ${cleanClaim.claimNumber}`
-                    );
-
-                  } catch (
-                    databaseError
-                  ) {
-
-                    console.error(
-                      "Could not complete Vapi call:",
-                      databaseError.message
-                    );
-
-                  }
-
-                },
-
-
-              // =================================
-              // CALL FAILED
-              // =================================
-
-              onFailed:
-                async (
-                  error,
-                  callId
-                ) => {
-
-                  console.error(
-                    `Clarification call failed for ${cleanClaim.claimNumber}:`,
-                    error.message
-                  );
-
-
-                  if (
-                    callId
-                  ) {
-
-                    try {
-
-                      updateVapiCallStatus(
-                        callId,
-                        "failed"
-                      );
-
-                    } catch (
-                      databaseError
-                    ) {
-
-                      console.error(
-                        "Could not save failed Vapi call:",
-                        databaseError.message
-                      );
-
-                    }
-
-                  }
-
-                }
-
-            }
-
+        verification =
+          await verifyProviderCached(
+            cleanClaim
           );
 
+      } catch (
+        error
+      ) {
 
-        console.log(
-          `Vapi queue result for ${cleanClaim.claimNumber}:`,
-          queueResult
-        );
+        verification = {
+          dataConfidenceScore: null,
+          confidenceBand: "incomplete",
+          blocking: false,
+          checks: [],
+          coverage: coverageReport(),
+          rationale:
+            "Provider verification did not complete, so this provider is " +
+            "unverified. That reflects our own failure, not anything about " +
+            "the provider.",
+          error: error.message
+        };
 
       }
 
 
-      res.json(
-        savedClaim
+      saveClaimVerification(
+        savedClaim.id,
+        verification,
+        cleanClaim
       );
+
+
+      // =======================================
+      // PROVIDER CLARIFICATION CALL
+      //
+      // Runs in the background. Whether it happens
+      // at all was already decided by the claim
+      // stage routing.
+      // =======================================
+
+      orchestrateProviderCall(
+        cleanClaim,
+        decision,
+        {
+          store:
+            VAPI_CALL_STORE
+        }
+      );
+
+
+      res.json({
+
+        ...savedClaim,
+
+        // Axis one, as the orchestrator decided it.
+        decision:
+          decision.verdict,
+
+        // Axis two, and the routing that reads both.
+        verification,
+
+        // triage() reads the claim axis as routine | review |
+        // priority; this engine's analyzer says low | review |
+        // high. Same three steps, different words — translated
+        // here at the boundary so neither side has to change its
+        // own vocabulary.
+        routing:
+          triage(
+            {
+              ...analysis,
+              reviewLevel:
+                CLAIM_AXIS_LEVEL[
+                  decision.verdict.riskLevel
+                ] || "review"
+            },
+            verification
+          ),
+
+        npi:
+          cleanClaim.npi ||
+          null
+
+      });
 
     } catch (
       error
@@ -2051,118 +1417,30 @@ app.post(
 
 
       // =======================================
-      // DETERMINISTIC APPEAL REVIEW
+      // ORCHESTRATION
+      //
+      // Deterministic re-check, AI evidence
+      // comparison, reconciliation, and routing all
+      // live in the appeal orchestrator.
       // =======================================
 
-      console.log(
-        `Running deterministic appeal review for ${cleanAppeal.claimNumber}...`
-      );
-
-
-      const rulesReview =
-        analyzeAppeal(
+      const decision =
+        await orchestrateAppeal(
           originalClaim,
           cleanAppeal
         );
 
 
-      console.log(
-        `Appeal Rules outcome for ${cleanAppeal.claimNumber}: ${rulesReview.outcome}`
-      );
+      const rulesReview =
+        decision.rulesReview;
 
 
-      // =======================================
-      // AI APPEAL REVIEW
-      // =======================================
+      const aiReview =
+        decision.aiReview;
 
-      let aiReview = {
-
-        available:
-          false,
-
-        outcome:
-          "unavailable",
-
-        summary:
-          "AI appeal evidence review unavailable.",
-
-        results:
-          []
-
-      };
-
-
-      try {
-
-        console.log(
-          `Running AI appeal review for ${cleanAppeal.claimNumber}...`
-        );
-
-
-        aiReview =
-          await reviewAppealWithAI(
-            originalClaim,
-            cleanAppeal
-          );
-
-
-        if (
-          aiReview.available
-        ) {
-
-          console.log(
-            `Appeal AI outcome for ${cleanAppeal.claimNumber}: ${aiReview.outcome}`
-          );
-
-        } else {
-
-          console.log(
-            `Appeal AI unavailable for ${cleanAppeal.claimNumber}. Using deterministic result.`
-          );
-
-        }
-
-      } catch (
-        error
-      ) {
-
-        console.error(
-          "AI appeal review error:",
-          error.message
-        );
-
-
-        aiReview = {
-
-          available:
-            false,
-
-          outcome:
-            "unavailable",
-
-          summary:
-            "AI appeal evidence review unavailable.",
-
-          results:
-            [],
-
-          error:
-            error.message
-
-        };
-
-      }
-
-
-      // =======================================
-      // FINAL APPEAL OUTCOME
-      // =======================================
 
       const finalOutcome =
-        deriveFinalAppealOutcome(
-          rulesReview,
-          aiReview
-        );
+        decision.finalOutcome;
 
 
       // =======================================
@@ -2239,13 +1517,7 @@ app.post(
             finalOutcome,
 
             workflowStatus:
-
-              finalOutcome ===
-                "resolved"
-
-                ? "completed"
-
-                : "pending"
+              decision.workflowStatus
 
           }
 
@@ -2656,6 +1928,49 @@ app.listen(
           : "disabled"
       }`
     );
+
+
+    // =========================================
+    // Vapi credential check
+    //
+    // vapi.js needs all four of these before it
+    // will place a call. Without them a claim is
+    // still analyzed, saved and routed; only the
+    // clarification call is skipped.
+    //
+    // Names only. Never print a credential value.
+    // =========================================
+
+    if (
+      process.env
+        .DEMO_AUTO_CALL ===
+      "true"
+    ) {
+
+      const missingVapiSettings =
+        [
+          "VAPI_API_KEY",
+          "VAPI_ASSISTANT_ID",
+          "VAPI_PHONE_NUMBER_ID",
+          "DEMO_BILLING_CONTACT"
+        ].filter(
+          (name) =>
+            !process.env[name]
+        );
+
+
+      console.log(
+        missingVapiSettings.length ===
+        0
+
+          ? "Vapi credentials: complete"
+
+          : `Vapi credentials: MISSING ${
+              missingVapiSettings.join(", ")
+            } - claims will be analyzed but calls will be skipped`
+      );
+
+    }
 
 
     console.log(

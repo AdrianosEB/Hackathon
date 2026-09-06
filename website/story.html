@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+
+  <title>Claim Integrity — the story</title>
+
+  <link rel="stylesheet" href="/story.css" />
+
+</head>
+
+<body>
+
+
+  <!-- =========================================================
+       BOOT
+       What the pipeline actually consists of, checked off as the
+       page comes up. It reports readiness of the front end only —
+       it never claims a registry has been contacted.
+  ========================================================== -->
+
+  <div class="boot" id="boot" aria-hidden="true">
+    <div class="boot-inner">
+      <p class="boot-head">INITIALIZING</p>
+      <ol class="boot-list" id="bootList"></ol>
+    </div>
+  </div>
+
+
+  <!-- scroll progress -->
+  <div class="progress" id="progress"></div>
+
+
+  <!-- persistent chrome -->
+  <header class="chrome">
+    <span class="mark">CLAIM&nbsp;INTEGRITY</span>
+    <a class="chrome-link" href="/">DASHBOARD&nbsp;↗</a>
+  </header>
+
+  <div class="scene-tag"><span id="sceneTag">SCENE 01</span></div>
+
+
+  <!-- Everything that scrolls lives inside #scroll, which is what the
+       smooth-scroll engine translates. The fixed chrome above stays
+       outside it so it does not get dragged along. -->
+  <div id="viewport">
+    <div id="scroll">
+
+
+  <main>
+
+
+    <!-- ===================== 01 · HERO ===================== -->
+
+    <section class="act act-hero" data-act="01" data-title="OPENING">
+
+      <div class="hero-pin" id="heroPin" data-pin>
+
+      <div class="hero-visual">
+
+        <div class="fold-stage">
+          <div class="fold" id="fold">
+            <div class="fc fc-front"><b>01</b><span>INTAKE</span></div>
+            <div class="fc fc-top"><b>02</b><span>CLAIM RULES</span>
+              <div class="fc fc-back"><b>03</b><span>AI EVIDENCE REVIEW</span></div>
+            </div>
+            <div class="fc fc-bottom"><b>04</b><span>PROVIDER REGISTRY</span></div>
+            <div class="fc fc-left"><b>05</b><span>ROUTING</span></div>
+            <div class="fc fc-right"><b>06</b><span>APPEAL</span></div>
+          </div>
+        </div>
+
+        <p class="hero-visual-cap" id="foldCap">A CLAIM, SEALED · SCROLL TO OPEN IT</p>
+
+      </div>
+
+      <div class="hero-copy" data-fade-out>
+        <p class="micro">DNHACKS · TWO-AXIS CLAIM REVIEW</p>
+
+        <h1 class="mega" data-anim="wipe">
+          TWO&nbsp;AXES.<br />
+          ONE&nbsp;CLAIM.
+        </h1>
+
+        <p class="rule"></p>
+
+        <p class="hero-line">A CODING ERROR IS NOT AN ACCUSATION.</p>
+
+        <p class="hero-sub">
+          How much of this claim's own content needs a person to look at it, and how well the
+          provider record matches the federal registry, are different questions. Answering them
+          together is how one becomes the other. So we keep them apart.
+        </p>
+
+        <a class="scroll-cue" href="#upload">
+          <span>SCROLL THE STORY</span>
+          <i></i>
+        </a>
+      </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================== 02 · THE AXES ===================== -->
+
+    <section class="act act-axes" data-act="02" data-title="THE TWO AXES">
+
+      <div class="act-head">
+        <p class="micro">THE METHOD</p>
+        <h2 class="big" data-anim="wipe">SEPARATE<br />QUESTIONS.</h2>
+      </div>
+
+      <div class="axis-pair">
+
+        <article class="axis-block" data-split style="--sx: 51%">
+          <p class="axis-n">01</p>
+          <h3>THE CLAIM</h3>
+          <p class="axis-body">
+            Deterministic rules over the line items — repeated codes, units out of band, prices
+            that do not match — and then a second, separate pass where a model reads the note
+            against what was billed. Every finding says which of the two found it.
+          </p>
+          <p class="axis-out">OUTPUT · RISK SCORE 0–100 · LOW / REVIEW / HIGH</p>
+        </article>
+
+        <article class="axis-block" data-split style="--sx: -51%">
+          <p class="axis-n">02</p>
+          <h3>THE RECORD</h3>
+          <p class="axis-body">
+            An agent panel queries the federal registry and reports what corroborates and what
+            does not. Slow, fallible, and never allowed to block intake. A low score is a
+            statement about the evidence, never about the provider.
+          </p>
+          <p class="axis-out">OUTPUT · DATA CONFIDENCE 0–100 · CONFIRMED / PROBABLE / INCOMPLETE / CONFLICTING</p>
+        </article>
+
+      </div>
+
+      <p class="act-note">
+        Where our own coverage is incomplete, the interface says so in the same colour it uses
+        for itself — never in a warning colour. A gap on our side must not read as a mark
+        against a provider. And when a provider disagrees with a finding, that is not the end
+        of the process: it is the start of scene seven.
+      </p>
+
+    </section>
+
+
+    <!-- ===================== 03 · UPLOAD ===================== -->
+
+    <section class="act act-upload" id="upload" data-act="03" data-title="SUBMIT A CLAIM">
+
+      <div class="act-head">
+        <p class="micro">SUBMIT</p>
+        <h2 class="big" data-anim="wipe">DROP<br />A CLAIM.</h2>
+      </div>
+
+      <div class="upload-grid">
+
+        <div>
+
+          <label class="drop" id="drop" for="fileInput" tabindex="0">
+            <input type="file" id="fileInput" accept=".csv,.json,text/csv,application/json" hidden />
+            <span class="drop-icon" aria-hidden="true"></span>
+            <span class="drop-head">DROP A CLAIM FILE</span>
+            <span class="drop-sub">
+              CSV OR JSON · or click to choose · or paste with <kbd>⌘V</kbd>
+            </span>
+          </label>
+
+          <p class="privacy">
+            The file is read in this browser and posted to your own API on this machine.
+            It is not uploaded anywhere else.
+          </p>
+
+          <div id="parsed" class="parsed" hidden></div>
+          <div id="dropError" class="oops" hidden></div>
+
+          <button class="cta" id="runBtn" disabled>
+            <span>RUN BOTH AXES</span>
+            <i></i>
+          </button>
+
+        </div>
+
+        <aside class="fixtures">
+          <p class="micro">OR RUN A FIXTURE</p>
+          <p class="fixtures-note">
+            The same claim files the command-line examples use. Each one states what it should
+            prove before it runs, which is the only way a demo can be wrong in public.
+          </p>
+          <div id="fixtureList" class="fixture-list"></div>
+
+          <details class="shape">
+            <summary>WHAT A CLAIM FILE LOOKS LIKE</summary>
+            <pre id="shapeSample"></pre>
+            <button class="ghost" id="downloadSample" type="button">
+              SAVE THIS AS A FILE TO TRY
+            </button>
+          </details>
+        </aside>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================== 04 · THE RUN ===================== -->
+
+    <section class="act act-run" id="run" data-act="04" data-title="THE RUN" hidden>
+
+      <div class="act-head">
+        <p class="micro" id="runMicro">RUNNING</p>
+        <h2 class="big" id="runTitle">BOTH AXES,<br />IN FLIGHT.</h2>
+        <p class="act-sub" id="runSub">
+          The claim rules finish immediately. The provider panel is talking to the federal
+          registry, so it takes as long as it takes — there is no progress to report until it
+          answers.
+        </p>
+      </div>
+
+      <ol class="film" id="film"></ol>
+
+    </section>
+
+
+    <!-- ===================== 05 · VERDICT ===================== -->
+
+    <section class="act act-verdict" id="verdict" data-act="05" data-title="VERDICT" hidden>
+
+      <div class="act-head">
+        <p class="micro" id="verdictMicro">VERDICT</p>
+        <h2 class="big" id="verdictHead">—</h2>
+        <p class="act-sub" id="verdictProvider"></p>
+      </div>
+
+      <div id="routingSlot"></div>
+      <div class="gauges" id="gauges"></div>
+      <div class="meta" id="meta"></div>
+
+    </section>
+
+
+    <!-- ===================== 06 · EVIDENCE ===================== -->
+
+    <section class="act act-evidence" id="evidence" data-act="06" data-title="EVIDENCE" hidden>
+
+      <div class="act-head">
+        <p class="micro">EVIDENCE</p>
+        <h2 class="big" data-anim="wipe">WHAT IT<br />ACTUALLY SAW.</h2>
+        <p class="act-sub">
+          Every observation carries the evidence behind it and, where one exists, the ordinary
+          explanation. A finding you cannot argue with is not a finding.
+        </p>
+      </div>
+
+      <div class="dossier" id="dossier"></div>
+
+    </section>
+
+
+    <!-- ===================== 07 · THE APPEAL =====================
+         A finding is not a verdict. The provider answers it, and the
+         same two readings run again on the answer: the rules check
+         whether the corrected lines resolve what was flagged, and a
+         model reads the letter. Both are shown, including when they
+         disagree.
+    ========================================================== -->
+
+    <section class="act act-appeal" id="appeal" data-act="07" data-title="THE APPEAL" hidden>
+
+      <div class="act-head">
+        <p class="micro">THE RIGHT OF REPLY</p>
+        <h2 class="big" data-anim="wipe">A FINDING<br />IS NOT<br />A VERDICT.</h2>
+        <p class="act-sub" id="appealIntro">
+          The provider gets to answer. Drop their letter and the same claim runs again against
+          what they have corrected — the rules check whether the flagged lines are actually
+          resolved, and a model reads the reasoning. Where those two disagree, the interface
+          says so rather than picking one.
+        </p>
+      </div>
+
+      <div class="upload-grid">
+
+        <div>
+
+          <label class="drop" id="appealDrop" for="appealFile" tabindex="0">
+            <input type="file" id="appealFile" accept=".txt,.json,text/plain,application/json" hidden />
+            <span class="drop-icon" aria-hidden="true"></span>
+            <span class="drop-head">DROP AN APPEAL LETTER</span>
+            <span class="drop-sub">TXT OR JSON · OR CLICK TO CHOOSE</span>
+          </label>
+
+          <p class="privacy">
+            Read in this browser and posted to your own API. An appeal must name a claim that
+            has already been assessed — there is nothing to answer otherwise.
+          </p>
+
+          <div id="appealParsed" class="parsed" hidden></div>
+          <div id="appealError" class="oops" hidden></div>
+
+          <button class="cta" id="appealBtn" disabled>
+            <span>REVIEW THE APPEAL</span>
+            <i></i>
+          </button>
+
+        </div>
+
+        <aside class="fixtures">
+          <p class="micro">OR RUN A PREPARED APPEAL</p>
+          <p class="fixtures-note">
+            Each letter answers one of the claim fixtures. The names say what should happen —
+            and two of them are supposed to fail, because an appeal that always succeeds is not
+            a review.
+          </p>
+          <div id="appealList" class="fixture-list"></div>
+        </aside>
+
+      </div>
+
+      <div id="appealResult"></div>
+
+    </section>
+
+
+    <!-- ===================== 08 · LEDGER ===================== -->
+
+    <section class="act act-ledger" id="ledger" data-act="08" data-title="THE LEDGER">
+
+      <div class="act-head">
+        <p class="micro">THE LEDGER</p>
+        <h2 class="big" data-anim="wipe">EVERYTHING<br />ASSESSED.</h2>
+      </div>
+
+      <div class="tiles" id="tiles"></div>
+
+      <figure class="field-wrap">
+        <canvas id="field"></canvas>
+        <figcaption class="field-cap" id="fieldCap">PLOTTING ASSESSED CLAIMS…</figcaption>
+      </figure>
+
+      <div class="table-wrap">
+        <table class="ledger">
+          <thead>
+            <tr>
+              <th>CLAIM</th>
+              <th>PROVIDER</th>
+              <th class="num">BILLED</th>
+              <th>CLAIM AXIS</th>
+              <th>PROVIDER AXIS</th>
+              <th>ROUTED</th>
+              <th class="num">TO REVIEW</th>
+            </tr>
+          </thead>
+          <tbody id="ledgerBody"></tbody>
+        </table>
+      </div>
+
+      <h3 class="sub-head">APPEALS</h3>
+      <p class="sub-note" id="appealsNote">
+        Every answer a provider has sent, and what came of it. Where the rules and the model
+        reached different conclusions, both are shown.
+      </p>
+
+      <div class="table-wrap">
+        <table class="ledger">
+          <thead>
+            <tr>
+              <th>CLAIM</th>
+              <th>PROVIDER</th>
+              <th>REASON</th>
+              <th>RULES SAID</th>
+              <th>MODEL SAID</th>
+              <th>OUTCOME</th>
+            </tr>
+          </thead>
+          <tbody id="appealsBody"></tbody>
+        </table>
+      </div>
+
+    </section>
+
+
+  </main>
+
+
+  <footer class="end">
+    <p class="micro">THE LIMIT OF THE CLAIM</p>
+    <p class="end-big" data-anim="wipe">
+      SCREENING SUPPORT.<br />
+      NOT AN ACCUSATION.
+    </p>
+    <p class="end-sub">
+      Observations indicate what a person should look at — not fraud, and not a coverage
+      determination. Provider bands describe the state of the evidence, never the character of
+      a provider. Nothing is sent to anyone until a named person approves it.
+    </p>
+  </footer>
+
+
+    </div>
+  </div>
+
+
+  <script type="module" src="/story.js"></script>
+
+</body>
+
+</html>

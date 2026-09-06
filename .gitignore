@@ -1,6 +1,13 @@
-.env
 node_modules/
+.env
 
 *.db
+*.db-journal
 *.db-shm
 *.db-wal
+
+# Recorded agent responses. Machine-local until
+# deliberately committed.
+fixtures/agent-cassettes.json
+
+.DS_Store
