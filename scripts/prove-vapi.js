@@ -193,7 +193,7 @@ const HARBOR = {
 
 function resetFixtureRows() {
 
-  const db = new DatabaseSync("claim-integrity.db");
+  const db = new DatabaseSync("claims.db");
 
   const npis = ["9000000023", "9000000072", "9000000015", "9000000031"];
 

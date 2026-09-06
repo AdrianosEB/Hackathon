@@ -69,11 +69,13 @@
 //    the actual breach.
 // --------------------------------------------------
 
-import { DatabaseSync } from "node:sqlite";
+// The approval queue lives with the claims it refers to, not in a
+// second database of its own.
+import { db as sharedDb } from "../db.js";
 import { registryContact } from "./sources/nppes.js";
 import { discoverFromWebsite } from "./sources/website.js";
 
-const db = new DatabaseSync("claim-integrity.db");
+const db = sharedDb;
 
 
 db.exec(`

@@ -18,9 +18,11 @@
 // registration is re-checked sooner.
 // --------------------------------------------------
 
-import { DatabaseSync } from "node:sqlite";
-
-const db = new DatabaseSync("claim-integrity.db");
+// The same handle db.js uses. Opening a second connection to a
+// different file put the claims table in one database and the
+// provider-axis columns in another, so every verification was
+// written nowhere and read back as null.
+import { db } from "../db.js";
 
 
 // --------------------------------------------------

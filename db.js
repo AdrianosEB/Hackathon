@@ -7,7 +7,11 @@ import {
 // Database
 // =============================================
 
-const db =
+// One handle, exported, because the verification layer stores its
+// cache and its extra claim columns in this same database. It used
+// to open its own connection to a different file, which meant the
+// provider axis silently wrote nowhere.
+export const db =
   new DatabaseSync(
     "claims.db"
   );
@@ -702,6 +706,15 @@ export function saveClaimVerification(
   // layer is switched off entirely they will not exist, and there
   // is nothing to record.
   if (!columns.has("verification")) {
+
+    // This is a wiring fault, not a data condition: the columns are
+    // added by verification/cache.js on boot. Failing quietly here is
+    // what hid the two-database bug, so it is loud now.
+    console.warn(
+      "saveClaimVerification: the provider-axis columns are missing, so the " +
+      "verification for claim " + id + " was not stored. Did migrateClaimsTable() run?"
+    );
+
     return { saved: false, reason: "verification columns are not present" };
   }
 
