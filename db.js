@@ -625,10 +625,116 @@ function normalizeClaim(
 
     flags,
 
+    // ---- axis two: the provider record ----
+    //
+    // These columns are added by verification/cache.js, not by the
+    // schema above, so a database written before provider
+    // verification existed still reads correctly — the fields just
+    // come back null, which is the honest answer for a claim that
+    // was never checked against the registry.
+    npi:
+      row.npi ||
+      null,
+
+    practiceAddressLine1:
+      row.practice_address_line1 ||
+      null,
+
+    practiceCity:
+      row.practice_city ||
+      null,
+
+    practiceState:
+      row.practice_state ||
+      null,
+
+    practicePhone:
+      row.practice_phone ||
+      null,
+
+    dataConfidenceScore:
+      row.data_confidence_score == null
+        ? null
+        : Number(row.data_confidence_score),
+
+    confidenceBand:
+      row.confidence_band ||
+      null,
+
+    verification:
+      parseJson(
+        row.verification,
+        null
+      ),
+
     createdAt:
       row.created_at
 
   };
+
+}
+
+
+// =============================================
+// Provider verification
+//
+// Recorded against the claim after the fact, because a
+// verification failure must never block claim intake. A claim
+// with no verification row is unverified — which is a statement
+// about our coverage, never about the provider.
+// =============================================
+
+export function saveClaimVerification(
+  id,
+  verification,
+  claim = {}
+) {
+
+  const columns =
+    new Set(
+      db
+        .prepare("PRAGMA table_info(claims)")
+        .all()
+        .map((column) => column.name)
+    );
+
+  // verification/cache.js adds these on boot. If the verification
+  // layer is switched off entirely they will not exist, and there
+  // is nothing to record.
+  if (!columns.has("verification")) {
+    return { saved: false, reason: "verification columns are not present" };
+  }
+
+  // The provider identity is stored here rather than at insert
+  // time, because these columns belong to axis two and only exist
+  // once the verification layer has migrated the table.
+  db
+    .prepare(`
+      UPDATE claims
+      SET
+        npi = ?,
+        practice_address_line1 = ?,
+        practice_city = ?,
+        practice_state = ?,
+        practice_phone = ?,
+        data_confidence_score = ?,
+        confidence_band = ?,
+        verification = ?
+      WHERE id = ?
+    `)
+    .run(
+      claim.npi || null,
+      claim.practiceAddressLine1 || null,
+      claim.practiceCity || null,
+      claim.practiceState || null,
+      claim.practicePhone || null,
+      verification?.dataConfidenceScore ?? null,
+      verification?.confidenceBand || "incomplete",
+      JSON.stringify(verification ?? null),
+      id
+    );
+
+  return { saved: true };
 
 }
 

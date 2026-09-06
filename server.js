@@ -14,6 +14,18 @@ import {
   getVapiQueueStatus
 } from "./vapi.js";
 
+// ---- axis two: the provider record ----
+//
+// Deliberately a separate layer. It can be switched off entirely
+// by env and claims still get assessed — a verification failure
+// must never block intake.
+import {
+  verifyProviderCached,
+  coverageReport,
+  migrateClaimsTable,
+  triage
+} from "./verification/index.js";
+
 import {
   orchestrateProviderCall,
   normalizeTranscript
@@ -23,6 +35,7 @@ import {
   createClaim,
   getClaim,
   listClaims,
+  saveClaimVerification,
   getDashboardStats,
   getProviderRiskStats,
 
@@ -89,6 +102,47 @@ app.use(
   express.static(
     "website"
   )
+);
+
+
+// The demo fixtures, so the interface can offer the same claim CSVs
+// and appeal letters the CLI examples use. Read-only static files.
+app.use(
+  "/demo",
+  express.static(
+    "demo"
+  )
+);
+
+app.use(
+  "/demo_appeal",
+  express.static(
+    "demo_appeal"
+  )
+);
+
+
+// The provider-axis columns are added to the claims table here
+// rather than in the schema, so a database written before axis two
+// existed still opens and reads correctly.
+migrateClaimsTable();
+
+
+// The scroll narrative. Same API, same fixtures — a different way
+// through claims, appeals and the evidence behind both.
+app.get(
+  "/story",
+  (
+    req,
+    res
+  ) => {
+
+    res.sendFile(
+      "story.html",
+      { root: "website" }
+    );
+
+  }
 );
 
 
@@ -219,6 +273,47 @@ function normalizeIncomingClaim(
     providerName:
       String(
         claim.providerName ||
+        ""
+      ).trim(),
+
+    // ---- provider identity, for axis two ----
+    //
+    // All optional. Without an NPI the provider can only be
+    // guessed at by name, and provider names are not unique — the
+    // verification result says exactly that.
+    npi:
+      String(
+        claim.npi ||
+        ""
+      ).replace(/\D/g, ""),
+
+    practiceAddressLine1:
+      String(
+        claim.practiceAddressLine1 ||
+        ""
+      ).trim(),
+
+    practiceCity:
+      String(
+        claim.practiceCity ||
+        ""
+      ).trim(),
+
+    practiceState:
+      String(
+        claim.practiceState ||
+        ""
+      ).trim().toUpperCase(),
+
+    practicePhone:
+      String(
+        claim.practicePhone ||
+        ""
+      ).trim(),
+
+    practiceWebsite:
+      String(
+        claim.practiceWebsite ||
         ""
       ).trim(),
 
@@ -701,6 +796,39 @@ app.get(
 );
 
 
+// The claim axis and the provider axis were written against
+// different words for the same three steps. Nothing downstream
+// depends on this beyond triage().
+const CLAIM_AXIS_LEVEL = {
+  low: "routine",
+  review: "review",
+  high: "priority"
+};
+
+
+// =============================================
+// Verification coverage
+//
+// Which provider checks are actually live. The interface reads
+// this so it can say what it did not check, rather than implying
+// a clean result covered everything.
+// =============================================
+
+app.get(
+  "/api/verification/coverage",
+  (
+    req,
+    res
+  ) => {
+
+    res.json(
+      coverageReport()
+    );
+
+  }
+);
+
+
 // =============================================
 // Analyze claim
 // =============================================
@@ -783,6 +911,59 @@ app.post(
 
 
       // =======================================
+      // AXIS TWO — THE PROVIDER RECORD
+      //
+      // Deliberately after the claim is saved. This
+      // is the slow, fallible half: it talks to the
+      // federal registry through an agent panel. A
+      // failure here degrades to "incomplete" and
+      // must never lose the claim.
+      //
+      // The two axes are kept apart on purpose. How
+      // much of a claim's own content needs a look,
+      // and how well a provider record matches the
+      // registry, are different questions — and
+      // answering them together is how a coding
+      // error turns into an accusation.
+      // =======================================
+
+      let verification;
+
+      try {
+
+        verification =
+          await verifyProviderCached(
+            cleanClaim
+          );
+
+      } catch (
+        error
+      ) {
+
+        verification = {
+          dataConfidenceScore: null,
+          confidenceBand: "incomplete",
+          blocking: false,
+          checks: [],
+          coverage: coverageReport(),
+          rationale:
+            "Provider verification did not complete, so this provider is " +
+            "unverified. That reflects our own failure, not anything about " +
+            "the provider.",
+          error: error.message
+        };
+
+      }
+
+
+      saveClaimVerification(
+        savedClaim.id,
+        verification,
+        cleanClaim
+      );
+
+
+      // =======================================
       // PROVIDER CLARIFICATION CALL
       //
       // Runs in the background. Whether it happens
@@ -800,9 +981,39 @@ app.post(
       );
 
 
-      res.json(
-        savedClaim
-      );
+      res.json({
+
+        ...savedClaim,
+
+        // Axis one, as the orchestrator decided it.
+        decision:
+          decision.verdict,
+
+        // Axis two, and the routing that reads both.
+        verification,
+
+        // triage() reads the claim axis as routine | review |
+        // priority; this engine's analyzer says low | review |
+        // high. Same three steps, different words — translated
+        // here at the boundary so neither side has to change its
+        // own vocabulary.
+        routing:
+          triage(
+            {
+              ...analysis,
+              reviewLevel:
+                CLAIM_AXIS_LEVEL[
+                  decision.verdict.riskLevel
+                ] || "review"
+            },
+            verification
+          ),
+
+        npi:
+          cleanClaim.npi ||
+          null
+
+      });
 
     } catch (
       error

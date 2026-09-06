@@ -1,67 +1,96 @@
 # Claim Integrity
 
-Synthetic medical-billing review demo. A claim is screened by deterministic
-rules and an AI evidence reviewer, a voice agent calls the provider about
-anything routed to a human, and the provider's appeal is judged against the
-original findings.
+Screening support for healthcare claims. It answers two questions,
+and keeps them apart:
 
-Nothing here determines fraud, approves or denies a claim, or makes a medical
-or payment decision. It decides which claims a human looks at, and in what
-order.
+**Axis one — the claim.** Deterministic rules over the line items,
+then a separate pass where a model reads the clinical note against
+what was billed. Every finding records which of the two raised it.
+Output: a risk score, and `low` / `review` / `high`.
+
+**Axis two — the provider record.** An agent panel checks the
+provider against the federal registry. Slow, fallible, and never
+allowed to block intake — if it fails, the claim is still assessed
+and the provider is reported as unverified. Output: a data
+confidence score, and `confirmed` / `probable` / `incomplete` /
+`conflicting`.
+
+Answering them together is how a coding error turns into an
+accusation, so they are composed only at the routing step, and the
+interface never blends them into one number.
+
+**And a finding is not a verdict.** A provider can answer it. The
+appeal runs the same claim again against what they have corrected —
+the rules check whether the flagged lines are actually resolved, and
+a model reads the letter. Where those two disagree, both readings
+stay on the record rather than one quietly winning.
+
 
 ## Run it
 
 ```bash
 npm install
-cp .env.example .env      # then fill in what you have
-npm start                 # http://localhost:3000
+npm start          # http://localhost:3000
 ```
 
-The app runs with an empty `.env`. Every credential is optional:
+Two front ends over the same API:
 
-| Missing | What still works |
+| | |
 |---|---|
-| `OPENAI_API_KEY` | Everything, decided by the deterministic rules alone. Claims and appeals both show `AI: UNAVAILABLE`. |
-| Vapi credentials | Everything except the outbound call. Claims are still analyzed, saved and routed to a human. |
+| `/` | the working dashboard — submit, review, appeal, provider calls |
+| `/story` | a scroll narrative through the same pipeline, eight scenes |
 
-The boot log tells you which mode you are in, and with `DEMO_AUTO_CALL=true`
-names any Vapi variable that is missing.
+For the provider axis against local fixtures rather than the live
+federal registry:
+
+```bash
+./run-local.sh     # :3101 registry fixture, :3102 practice sites, :3000 app
+```
+
+Every fixture NPI begins with `9` — a range CMS has never assigned —
+so no real provider can be implicated.
+
 
 ## Demo script
 
-Import claims from `demo/` and appeals from `demo_appeal/` through the website.
-Each filename says what it is meant to do:
+1. `/story`, scene 3 — drop `demo/claim_06_high_duplicate.csv`.
+2. Scene 4 shows the rules pass and the evidence review as separate
+   stages, then the registry check.
+3. Scene 5 puts both axes side by side. Scene 6 lists every finding
+   with the pass that raised it.
+4. Scene 7 — drop `demo_appeal/appeal_06_WORKS_duplicate_removed.txt`.
+   The duplicate is gone, and the appeal resolves.
+5. Try `demo_appeal/appeal_09_FAIL_duplicate_still_present.txt`
+   against the same claim. It does not resolve, and the interface
+   says why. An appeal that always succeeds is not a review.
+6. Scene 8 — every claim plotted by both axes, and every appeal with
+   what the rules and the model each concluded.
 
-- `claim_01_clean.csv` → low, no call
-- `claim_06_high_duplicate.csv` → high, call placed
-- `appeal_06_WORKS_duplicate_removed.txt` → resolved
-- `appeal_07_PARTIAL_...txt` → partially resolved
-- `appeal_09_FAIL_...txt` → not resolved
-
-`npm run example:demo` checks all 18 of those still do what their names say.
 
 ## Examples
 
-None of these touch the database, start a server, or place a call.
-
 ```bash
-npm run example        # every scenario, all three stages
-npm run example:demo   # the shipped demo/ and demo_appeal/ files
-npm run example:call   # the call lifecycle against a fake Vapi queue
-npm run example:merge  # how rules findings and AI findings combine
+npm run example         # the orchestration end to end
+npm run example:merge   # how rules and AI findings are merged
+npm run example:call    # the provider call path
+npm run example:demo    # every demo file through the pipeline
 ```
+
 
 ## Layout
 
 ```
-analyzer.js              deterministic claim rules
-ai-reviewer.js           AI claim evidence review
-appeal-analyzer.js       deterministic appeal re-check
-appeal-ai-reviewer.js    AI appeal evidence review
-vapi.js                  outbound call, queue, polling
-db.js                    SQLite storage
-server.js                HTTP API
-orchestration/           the three stages; see orchestration/README.md
-examples/                runnable examples
-website/                 the frontend
+orchestration/     axis one — rules, evidence review, the merge, routing
+verification/      axis two — federal registry, coverage, outreach
+analyzer.js        the deterministic rules
+appeal-analyzer.js do the corrected lines resolve what was flagged
+vapi.js            provider clarification calls
+website/           both front ends
+demo/              claim fixtures (CSV)
+demo_appeal/       appeal fixtures (TXT)
 ```
+
+Screening support only. Observations indicate what a person should
+look at — not fraud, and not a coverage determination. Provider bands
+describe the state of the evidence, never the character of a
+provider.
