@@ -1,5 +1,5 @@
 /* =============================================================
-   CLAIM INTEGRITY — THE STORY
+   INSUCHECK — THE STORY
    =============================================================
 
    A scroll narrative. Black ground, white type, and colour spent
@@ -409,7 +409,11 @@ html.engine [data-fade-out] { opacity: var(--o, 1); }
   /* The net's centre sits half a face above the front face's centre,
      so slide the whole assembly as it opens to keep it centred. */
   transform:
-    translateY(calc((1 - var(--fold)) * var(--s) * .5))
+    translate3d(
+      0,
+      calc((1 - var(--fold)) * var(--s) * .5 - var(--fold) * var(--s) * .16),
+      calc(var(--fold) * var(--s) * .42)
+    )
     scale(calc(.95 + var(--fold) * .55))
     rotateX(var(--tilt))
     rotateY(var(--spin));
@@ -1762,7 +1766,7 @@ body {
   pointer-events: none;
 }
 
-.fold { filter: drop-shadow(0 16px 26px rgba(27, 26, 23, 0.1)); }
+.fold { filter: drop-shadow(0 24px 30px rgba(27, 26, 23, 0.15)); }
 
 .fc,
 .fc-front,

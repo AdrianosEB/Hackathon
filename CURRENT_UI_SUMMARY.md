@@ -1,8 +1,8 @@
-# Claim Integrity: Current UI Summary
+# insuCheck: Current UI Summary
 
 ## Purpose and product framing
 
-Claim Integrity is a healthcare-claim screening tool. Its interface deliberately separates two questions:
+insuCheck is a healthcare-claim screening tool. Its interface deliberately separates two questions:
 
 1. **The claim**: deterministic billing rules plus an AI evidence review produce a risk score and a `LOW`, `REVIEW`, or `HIGH` band.
 2. **The provider record**: registry evidence is treated as a separate confidence question, so a data gap does not read as an accusation.
@@ -27,7 +27,7 @@ The application repeatedly states its guardrail: **screening support, not an acc
 
 ### Global header
 
-- A 64 px top bar with **Claim Integrity** branding on the left.
+- A 64 px top bar with **insuCheck** branding on the left.
 - Centered two-button mode switch: **Claims** and **Appeals**.
 - Right side: status text, **Provider analytics**, **Queue**, and an **Upload claims** action. Queue and upload open foreground overlays with backdrop and Escape-key dismissal.
 

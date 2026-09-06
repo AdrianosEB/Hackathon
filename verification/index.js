@@ -52,6 +52,33 @@ export {
 
 
 // --------------------------------------------------
+// In-flight verification work
+// --------------------------------------------------
+
+// The database cache only helps after a verification
+// has finished. A burst of requests for the same NPI
+// can otherwise start the same agent panel several
+// times before any one result is available to cache.
+//
+// Keep one promise per cache key while it is running.
+// This is intentionally process-local and short-lived:
+// the durable cache below remains the source of truth
+// across restarts and workspaces.
+const inFlightVerifications = new Map();
+
+
+function inFlightKey(npi, fingerprint) {
+
+  if (!npi) {
+    return null;
+  }
+
+  return `${String(npi).trim()}:${fingerprint}`;
+
+}
+
+
+// --------------------------------------------------
 // Verify, with cache
 // --------------------------------------------------
 
@@ -65,11 +92,55 @@ export async function verifyProviderCached(claim) {
     return cached;
   }
 
-  const result = await verifyProvider(claim);
+  const key = inFlightKey(claim.npi, fingerprint);
 
-  cacheVerification(claim.npi, claim.providerName, result);
+  const running = key
+    ? inFlightVerifications.get(key)
+    : null;
 
-  return { ...result, fromCache: false };
+  if (running) {
+
+    const result = await running;
+
+    return {
+      ...result,
+      fromCache: false,
+      sharedInFlight: true
+    };
+
+  }
+
+  const work = (async () => {
+
+    const result = await verifyProvider(claim);
+
+    cacheVerification(claim.npi, claim.providerName, result);
+
+    return result;
+
+  })();
+
+  if (key) {
+    inFlightVerifications.set(key, work);
+  }
+
+  try {
+
+    const result = await work;
+
+    return { ...result, fromCache: false };
+
+  } finally {
+
+    // Always release the key, including when an agent
+    // or cache write fails, so a later request can try
+    // again instead of inheriting a stale rejection.
+    if (key && inFlightVerifications.get(key) === work) {
+      inFlightVerifications.delete(key);
+    }
+
+  }
+
 
 }
 

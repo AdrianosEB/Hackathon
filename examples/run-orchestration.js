@@ -170,7 +170,7 @@ console.log(
 );
 
 console.log(
-  `CLAIM INTEGRITY ORCHESTRATION - ${
+  `INSUCHECK ORCHESTRATION - ${
     AI_ENABLED
       ? "HYBRID (rules + AI)"
       : "RULES ONLY (no ANTHROPIC_API_KEY)"

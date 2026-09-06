@@ -8,7 +8,7 @@
   <meta name="color-scheme" content="light" />
   <meta name="theme-color" content="#fbfaf8" />
 
-  <title>Claim Integrity — the story</title>
+  <title>insuCheck — the story</title>
 
   <link rel="stylesheet" href="/story.css" />
 
@@ -38,9 +38,9 @@
 
   <!-- persistent chrome -->
   <header class="chrome">
-    <a class="mark" href="/story" aria-label="Claim Integrity story">
+    <a class="mark" href="/story" aria-label="insuCheck story">
       <span class="brand-mark" aria-hidden="true"></span>
-      <span>Claim Integrity</span>
+      <span>insuCheck</span>
     </a>
     <span class="story-nav" aria-current="page">Story</span>
     <a class="chrome-link" href="/dashboard">Open dashboard <span aria-hidden="true">→</span></a>
@@ -70,25 +70,27 @@
         <div class="fold-stage">
           <div class="fold" id="fold">
             <div class="fc fc-front"><b>01</b><span>INTAKE</span></div>
-            <div class="fc fc-top"><b>02</b><span>CLAIM RULES</span>
+            <div class="fc fc-top"><b>02</b><span>BILLING CHECKS</span>
               <div class="fc fc-back"><b>03</b><span>AI EVIDENCE REVIEW</span></div>
             </div>
-            <div class="fc fc-bottom"><b>04</b><span>PROVIDER REGISTRY</span></div>
-            <div class="fc fc-left"><b>05</b><span>ROUTING</span></div>
-            <div class="fc fc-right"><b>06</b><span>APPEAL</span></div>
+            <div class="fc fc-bottom"><b>04</b><span>PROVIDER CONTEXT</span></div>
+            <div class="fc fc-left"><b>05</b><span>CASE ROUTING</span></div>
+            <div class="fc fc-right"><b>06</b><span>RIGHT OF REPLY</span></div>
           </div>
         </div>
 
-        <p class="hero-visual-cap" id="foldCap">A CLAIM, SEALED · SCROLL TO OPEN IT</p>
+        <p class="hero-visual-cap" id="foldCap">A CLAIM, RAISED FOR REVIEW · SCROLL TO OPEN THE CASE</p>
 
       </div>
 
       <div class="hero-copy" data-fade-out>
-        <p class="micro">DNHACKS · TWO-AXIS CLAIM REVIEW</p>
+        <p class="micro">DNHACKS · INSUCHECK WORKBENCH</p>
 
         <h1 class="mega" data-anim="wipe">
-          TWO&nbsp;AXES.<br />
-          ONE&nbsp;CLAIM.
+          PROTECT<br />
+          YOUR&nbsp;MLR.<br />
+          FOCUS<br />
+          YOUR&nbsp;SIU.
         </h1>
 
         <p class="rule"></p>
@@ -96,9 +98,9 @@
         <p class="hero-line">A CODING ERROR IS NOT AN ACCUSATION.</p>
 
         <p class="hero-sub">
-          How much of this claim's own content needs a person to look at it, and how well the
-          provider record matches the federal registry, are different questions. Answering them
-          together is how one becomes the other. So we keep them apart.
+          insuCheck helps payer SIU teams find the billing concerns worth investigating,
+          assemble the evidence, and route the next human action before avoidable medical spend
+          inflates your MLR. It surfaces what needs review without turning an observation into an accusation.
         </p>
 
         <a class="scroll-cue" href="#upload">
@@ -112,17 +114,17 @@
     </section>
 
 
-    <!-- ===================== 02 · THE AXES ===================== -->
+    <!-- ===================== 02 · THE REVIEW ===================== -->
 
-    <section class="act act-axes" data-act="02" data-title="THE TWO AXES">
+    <section class="act act-axes" data-act="02" data-title="THE REVIEW">
 
       <div class="act-head">
-        <p class="micro">THE METHOD</p>
-        <h2 class="big" data-anim="wipe">TWO QUESTIONS.<br />NOT ONE SCORE.</h2>
+        <p class="micro">THE WORKBENCH</p>
+        <h2 class="big" data-anim="wipe">TURN A CLAIM<br />INTO A CASE<br />TO REVIEW.</h2>
         <p class="act-sub">
-          “Axis” just means a separate measurement. One measures what needs review in this
-          bill; the other measures how complete and consistent the provider record is. They do
-          not add together, because a billing issue is not evidence about a provider.
+          Start with the bill, then put its supporting record in context. Billing findings and
+          provider evidence stay distinct so the investigator can see what happened, what is
+          known, and what needs a person to decide.
         </p>
       </div>
 
@@ -130,26 +132,26 @@
 
         <article class="axis-block" data-split style="--sx: 51%">
           <p class="axis-n">01</p>
-          <h3>THIS BILL</h3>
+          <h3>REVIEW THE BILL</h3>
           <p class="axis-body">
             Deterministic rules over the line items — repeated codes, units out of band, prices
             that do not match — and then a second, separate pass where a model reads the note
             against what was billed. This answers: <strong>how much should a person review this
-            claim?</strong> Every finding says which of the two found it.
+            claim?</strong> Every finding keeps its source, so the investigator can follow the
+            evidence back to the check that raised it.
           </p>
-          <p class="axis-out">OUTPUT · REVIEW PRIORITY 0–100 · LOW / REVIEW / HIGH</p>
+          <p class="axis-out">OUTPUT · REVIEW PRIORITY · LOW / REVIEW / HIGH</p>
         </article>
 
         <article class="axis-block" data-split style="--sx: -51%">
           <p class="axis-n">02</p>
-          <h3>THE PROVIDER RECORD</h3>
+          <h3>CHECK THE RECORD</h3>
           <p class="axis-body">
-            An agent panel queries the federal registry and reports what corroborates and what
-            does not. This answers: <strong>how much evidence do we have that this record is
-            complete and consistent?</strong> It is slow, fallible, and never allowed to block
-            intake. A low score is a statement about the evidence, never about the provider.
+            The workbench checks the federal registry and reports what corroborates the submitted
+            record, what is missing, and what needs clarification. It never blocks intake. A gap
+            in the record is a gap in evidence, never a judgment about the provider.
           </p>
-          <p class="axis-out">OUTPUT · DATA CONFIDENCE 0–100 · CONFIRMED / PROBABLE / INCOMPLETE / CONFLICTING</p>
+          <p class="axis-out">OUTPUT · RECORD STATUS · CONFIRMED / PROBABLE / INCOMPLETE / CONFLICTING</p>
         </article>
 
       </div>
@@ -157,8 +159,8 @@
       <p class="act-note">
         Where our own coverage is incomplete, the interface says so in the same colour it uses
         for itself — never in a warning colour. A gap on our side must not read as a mark
-        against a provider. And when a provider disagrees with a finding, that is not the end
-        of the process: it is the start of scene seven.
+        against a provider. And when a provider disagrees with a finding, the case moves to a
+        right of reply.
       </p>
 
     </section>
@@ -195,7 +197,7 @@
           <div id="dropError" class="oops" hidden></div>
 
           <button class="cta" id="runBtn" disabled>
-            <span>RUN BOTH AXES</span>
+            <span>START THE REVIEW</span>
             <i></i>
           </button>
 
@@ -229,7 +231,7 @@
 
       <div class="act-head">
         <p class="micro" id="runMicro">RUNNING</p>
-        <h2 class="big" id="runTitle">BOTH AXES,<br />IN FLIGHT.</h2>
+        <h2 class="big" id="runTitle">CHECKS<br />IN FLIGHT.</h2>
         <p class="act-sub" id="runSub">
           The claim rules finish immediately. The provider panel is talking to the federal
           registry, so it takes as long as it takes — there is no progress to report until it
@@ -279,7 +281,7 @@
 
     <!-- ===================== 07 · THE APPEAL =====================
          A finding is not a verdict. The provider answers it, and the
-         same two readings run again on the answer: the rules check
+         same review checks run again on the answer: the rules check
          whether the corrected lines resolve what was flagged, and a
          model reads the letter. Both are shown, including when they
          disagree.
@@ -352,11 +354,6 @@
 
       <div class="tiles" id="tiles"></div>
 
-      <figure class="field-wrap">
-        <canvas id="field"></canvas>
-        <figcaption class="field-cap" id="fieldCap">PLOTTING ASSESSED CLAIMS…</figcaption>
-      </figure>
-
       <div class="table-wrap">
         <table class="ledger">
           <thead>
@@ -364,8 +361,8 @@
               <th>CLAIM</th>
               <th>PROVIDER</th>
               <th class="num">BILLED</th>
-              <th>CLAIM AXIS</th>
-              <th>PROVIDER AXIS</th>
+              <th>BILLING REVIEW</th>
+              <th>RECORD CHECK</th>
               <th>ROUTED</th>
               <th class="num">TO REVIEW</th>
             </tr>

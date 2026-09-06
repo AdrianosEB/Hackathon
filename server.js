@@ -1935,7 +1935,7 @@ function logStartup(
 ) {
 
     console.log(
-      `Claim Integrity running at http://localhost:${port}`
+      `insuCheck running at http://localhost:${port}`
     );
 
 

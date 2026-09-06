@@ -67,7 +67,7 @@ function userAgent() {
     );
   }
 
-  return `ClaimIntegrity-Verification/1.0 (${email})`;
+  return `insuCheck-Verification/1.0 (${email})`;
 
 }
 

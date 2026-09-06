@@ -135,7 +135,7 @@ async function fetchPage(rawUrl, { allowLocal = false } = {}) {
       redirect: "follow",
       headers: {
         accept: "text/html,application/xhtml+xml",
-        "user-agent": "ClaimIntegrity-ContactDiscovery/0.1"
+        "user-agent": "insuCheck-ContactDiscovery/0.1"
       }
     });
 

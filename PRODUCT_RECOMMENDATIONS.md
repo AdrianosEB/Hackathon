@@ -1,4 +1,4 @@
-# Claim Integrity: Hackathon-Winning SIU Workbench
+# insuCheck: Hackathon-Winning SIU Workbench
 
 ## Summary
 

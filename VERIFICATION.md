@@ -1,6 +1,6 @@
 # Provider verification layer
 
-Adds a second axis to Claim Integrity. Your existing `analyzer.js` asks *is this claim
+Adds a second axis to insuCheck. Your existing `analyzer.js` asks *is this claim
 anomalous?* This asks *is the entity billing it real?* — and routes on the combination.
 
 ---
@@ -10,7 +10,7 @@ anomalous?* This asks *is the entity billing it real?* — and routes on the com
 `.env` is committed to a public repo. Anything in it is compromised.
 
 ```bash
-git rm --cached .env claim-integrity.db claim-integrity.db-shm claim-integrity.db-wal
+git rm --cached .env insucheck.db insucheck.db-shm insucheck.db-wal
 printf '.env\n*.db\n*.db-shm\n*.db-wal\nnode_modules/\n' >> .gitignore
 git commit -m "Remove secrets and database from version control"
 ```
@@ -84,7 +84,7 @@ VERIFY_RESEARCH=false   # tier 2, open web — advisory only, see "Two tiers" be
 
 Drop `verification/` into the repo root and replace `server.js`. That's it —
 `migrateClaimsTable()` adds the new columns to your existing database on boot, so your
-current `claim-integrity.db` keeps working.
+current `insucheck.db` keeps working.
 
 > The new `server.js` also fixes a live bug: your old one served static files from
 > `/website`, which doesn't exist, so `/`, `style.css` and `script.js` all 404'd.

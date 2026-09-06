@@ -1,5 +1,5 @@
 /* =============================================================
-   CLAIM INTEGRITY — THE STORY
+   INSUCHECK — THE STORY
    =============================================================
 
    A scroll narrative over the existing API. It adds no endpoints
@@ -487,8 +487,8 @@ import { claimFromCsv, appealFromTxt } from "/parsers.js";
       const phase = open > 0.55 ? 1 : 0;
       if (phase !== lastPhase && cap) {
         cap.textContent = phase
-          ? "OPENED INTO SIX STAGES · EVERY ONE OF THEM RUNS ON EVERY CLAIM"
-          : "A CLAIM, SEALED · SCROLL TO OPEN IT";
+          ? "OPENED INTO THE REVIEW WORKFLOW · EVERY STAGE LEAVES AN EVIDENCE TRAIL"
+          : "A CLAIM, RAISED FOR REVIEW · SCROLL TO OPEN THE CASE";
         lastPhase = phase;
       }
     }
@@ -838,15 +838,15 @@ import { claimFromCsv, appealFromTxt } from "/parsers.js";
     $("fieldCap").innerHTML = stats.claims
       ? `${stats.claims} ASSESSED CLAIM${stats.claims === 1 ? "" : "S"} AT ${stats.positions} ` +
         `DISTINCT SCORE${stats.positions === 1 ? "" : "S"} · ` +
-        `ACROSS: CLAIM RISK · UP: DATA CONFIDENCE<br />` +
+        `ACROSS: BILLING REVIEW PRIORITY · UP: RECORD CORROBORATION<br />` +
         `ONE DOT IS ONE CLAIM — CLAIMS SCORING IDENTICALLY ARE FANNED APART SO NONE HIDES ANOTHER<br />` +
         `${stats.providers} RING${stats.providers === 1 ? "" : "S"} — EACH MARKS A PROVIDER WITH MORE THAN ` +
         `ONE CLAIM, AT THE CENTRE OF ITS OWN`
       : stats.assessed
         ? `${stats.assessed} CLAIM${stats.assessed === 1 ? "" : "S"} ASSESSED, NONE WITH A ` +
-          `PROVIDER SCORE YET — SO THERE IS NOTHING TO PLOT ON THE SECOND AXIS.<br />` +
+          `RECORD STATUS YET — SO THERE IS NOT ENOUGH CONTEXT TO PLOT.<br />` +
           `THAT IS A GAP IN OUR COVERAGE, NOT A FINDING ABOUT ANY PROVIDER.`
-        : "NO CLAIMS ASSESSED YET — THE AXES ARE EMPTY, WHICH IS THE HONEST PICTURE.";
+        : "NO CLAIMS ASSESSED YET — START A REVIEW TO BUILD THE CASE QUEUE.";
   }
 
 
@@ -1123,16 +1123,16 @@ import { claimFromCsv, appealFromTxt } from "/parsers.js";
   const STAGES = [
     { id: "intake",   name: "Claim intake",
       waiting: "Reading the submitted claim…" },
-    { id: "rules",    name: "Claim axis · deterministic rules",
+    { id: "rules",    name: "Billing checks · deterministic rules",
       waiting: "Checking the line items against the rules…" },
-    { id: "ai",       name: "Claim axis · evidence review",
+    { id: "ai",       name: "Evidence review · clinical note",
       waiting: "A model reads the clinical note against what was billed. Separate pass, separate finding." },
-    { id: "registry", name: "Provider axis · federal registry",
+    { id: "registry", name: "Record check · federal registry",
       waiting: "An agent panel is querying the registry. This is the slow part, and we cannot see inside it." },
     { id: "coverage", name: "Coverage",
       waiting: "Working out what was and was not checked…" },
-    { id: "routing",  name: "Routing",
-      waiting: "Composing the two axes…" }
+    { id: "routing",  name: "Case routing",
+      waiting: "Preparing the next review step…" }
   ];
 
 
@@ -1239,7 +1239,7 @@ import { claimFromCsv, appealFromTxt } from "/parsers.js";
 
     $("runBtn").classList.add("is-running");
     $("runMicro").textContent = "RUNNING";
-    $("runTitle").innerHTML = "BOTH AXES,<br />IN FLIGHT.";
+    $("runTitle").innerHTML = "CHECKS<br />IN FLIGHT.";
     $("runSub").textContent =
       "The claim rules finish immediately. The provider panel is talking to the federal " +
       "registry, so it takes as long as it takes — there is no progress to report until it " +
@@ -1293,7 +1293,7 @@ import { claimFromCsv, appealFromTxt } from "/parsers.js";
       $("runMicro").textContent =
         `ANSWERED IN ${elapsed}` +
         (cached ? " · REGISTRY RESULT SERVED FROM CACHE" : "");
-      $("runTitle").innerHTML = "BOTH AXES,<br />ANSWERED.";
+      $("runTitle").innerHTML = "REVIEW<br />READY.";
       $("runSub").textContent =
         "Every row below is what the response actually contained. Nothing here is inferred " +
         "from how long the wait was.";
@@ -1330,7 +1330,6 @@ import { claimFromCsv, appealFromTxt } from "/parsers.js";
 
       await loadLedger();
       await loadAppeals();
-      await loadField();
       recollect();
 
     } catch (error) {
@@ -1417,8 +1416,8 @@ import { claimFromCsv, appealFromTxt } from "/parsers.js";
       <div class="gauge-cell">
         ${gauge(d.riskScore, cTone, "0 = NOTHING TO SEE")}
         <div>
-          <p class="micro" style="margin-bottom:6px">AXIS ONE · THE CLAIM</p>
-          <h4>Risk score</h4>
+          <p class="micro" style="margin-bottom:6px">BILLING REVIEW</p>
+          <h4>Review priority</h4>
           <p>How much of the claim's own content needs a person to look at it — the rules and
              the evidence review together. It never depends on who the provider is.</p>
           <span class="band t-${esc(cTone)}">${esc(d.riskLevel)}</span>
@@ -1430,8 +1429,8 @@ import { claimFromCsv, appealFromTxt } from "/parsers.js";
       <div class="gauge-cell">
         ${gauge(v.dataConfidenceScore ?? null, pTone, "100 = CORROBORATED")}
         <div>
-          <p class="micro" style="margin-bottom:6px">AXIS TWO · THE RECORD</p>
-          <h4>Data confidence</h4>
+          <p class="micro" style="margin-bottom:6px">RECORD CHECK</p>
+          <h4>Record corroboration</h4>
           <p>How well the provider record matches the federal registry. A low score is a
              statement about the evidence, never about the provider.</p>
           <span class="band t-${esc(pTone)}">${esc(v.confidenceBand || "not run")}</span>
@@ -1515,7 +1514,7 @@ import { claimFromCsv, appealFromTxt } from "/parsers.js";
         ${flags.length
           ? `This claim carries ${flags.length} finding${flags.length === 1 ? "" : "s"}. A
              finding is not a verdict — the provider can answer it, and scene seven runs that
-             answer against the same two readings.`
+             answer against the same review checks.`
           : `Nothing was flagged, so there is nothing for a provider to answer.`}
       </p>
     `;
@@ -1763,15 +1762,29 @@ import { claimFromCsv, appealFromTxt } from "/parsers.js";
 
       const response = await fetch("/api/dashboard");
       const data = await response.json();
+      const stats = data.stats || {};
+      const claims = Array.isArray(data.claims) ? data.claims : [];
+      const totalClaims = Number.isFinite(Number(stats.totalClaims))
+        ? Number(stats.totalClaims)
+        : claims.length;
+      const flaggedClaims = Number.isFinite(Number(stats.flaggedClaims))
+        ? Number(stats.flaggedClaims)
+        : claims.filter((claim) => claim.riskLevel !== "low").length;
+      const repeatedLineItems = claims.reduce(
+        (count, claim) => count + (claim.flags || []).filter(
+          (flag) => flag.type === "duplicate"
+        ).length,
+        0
+      );
 
       $("tiles").innerHTML = `
-        <div class="tile"><span>CLAIMS ASSESSED</span><strong>${data.stats.claimsAnalyzed}</strong></div>
-        <div class="tile"><span>NEED A LOOK</span><strong>${data.stats.needsReview}</strong></div>
-        <div class="tile"><span>AMOUNT TO REVIEW</span><strong>${money(data.stats.reviewAmount)}</strong></div>
-        <div class="tile"><span>REPEATED LINE ITEMS</span><strong>${data.stats.repeatedLineObservations}</strong></div>`;
+        <div class="tile"><span>CLAIMS ASSESSED</span><strong>${totalClaims}</strong></div>
+        <div class="tile"><span>NEED A LOOK</span><strong>${flaggedClaims}</strong></div>
+        <div class="tile"><span>AMOUNT TO REVIEW</span><strong>${money(stats.reviewAmount)}</strong></div>
+        <div class="tile"><span>REPEATED LINE ITEMS</span><strong>${repeatedLineItems}</strong></div>`;
 
-      $("ledgerBody").innerHTML = data.claims.length
-        ? data.claims.map(row).join("")
+      $("ledgerBody").innerHTML = claims.length
+        ? claims.map(row).join("")
         : `<tr><td colspan="7" class="empty">Nothing assessed yet.</td></tr>`;
 
       $("ledgerBody").querySelectorAll("tr[data-id]").forEach((tr) => {
@@ -1833,7 +1846,6 @@ import { claimFromCsv, appealFromTxt } from "/parsers.js";
 
   renderFixtures();
   renderAppealFixtures();
-  loadField();
   loadLedger();
   loadAppeals();
 
