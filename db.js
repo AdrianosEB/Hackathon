@@ -3,7 +3,6 @@ import {
 } from "node:sqlite";
 
 
-
 // =============================================
 // Database
 // =============================================
@@ -19,33 +18,26 @@ db.exec(
 );
 
 
-
 // =============================================
 // Claims table
 // =============================================
 
 db.exec(`
-
   CREATE TABLE IF NOT EXISTS claims (
 
     id INTEGER PRIMARY KEY AUTOINCREMENT,
 
     claim_number TEXT NOT NULL,
-
     provider_name TEXT NOT NULL,
 
     patient_label TEXT,
-
     diagnosis_codes TEXT,
-
     clinical_note TEXT,
 
     line_items TEXT NOT NULL,
 
     total_billed REAL NOT NULL DEFAULT 0,
-
     risk_score INTEGER NOT NULL DEFAULT 0,
-
     review_amount REAL NOT NULL DEFAULT 0,
 
     risk_level TEXT NOT NULL DEFAULT 'low',
@@ -55,16 +47,14 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 
   );
-
 `);
 
 
-// --------------------------------------------------
-// Store completed Vapi clarification calls
-// --------------------------------------------------
+// =============================================
+// Legacy Vapi transcript table
+// =============================================
 
 db.exec(`
-
   CREATE TABLE IF NOT EXISTS vapi_call_transcripts (
 
     call_id TEXT PRIMARY KEY,
@@ -72,21 +62,17 @@ db.exec(`
     claim_number TEXT,
 
     transcript TEXT,
-
     messages TEXT,
-
     ended_reason TEXT,
 
     received_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 
   );
-
 `);
 
 
-
 // =============================================
-// Database migration helper
+// Migration helper
 // =============================================
 
 function ensureColumn(
@@ -125,9 +111,8 @@ function ensureColumn(
 }
 
 
-
 // =============================================
-// Add new hybrid rating columns
+// Hybrid risk columns
 // =============================================
 
 ensureColumn(
@@ -144,13 +129,11 @@ ensureColumn(
 );
 
 
-
 // =============================================
 // Vapi calls table
 // =============================================
 
 db.exec(`
-
   CREATE TABLE IF NOT EXISTS vapi_calls (
 
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -176,13 +159,37 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 
   );
-
 `);
 
 
+// =============================================
+// Safe JSON parser
+// =============================================
+
+function parseJson(
+  value,
+  fallback
+) {
+
+  try {
+
+    return value
+      ? JSON.parse(
+          value
+        )
+      : fallback;
+
+  } catch {
+
+    return fallback;
+
+  }
+
+}
+
 
 // =============================================
-// Severity helper for old claims
+// Risk helper
 // =============================================
 
 function deriveRiskLevel(
@@ -190,7 +197,9 @@ function deriveRiskLevel(
 ) {
 
   if (
-    !Array.isArray(flags)
+    !Array.isArray(
+      flags
+    )
   ) {
 
     return "low";
@@ -201,7 +210,8 @@ function deriveRiskLevel(
   if (
     flags.some(
       (flag) =>
-        flag.severity === "high"
+        flag.severity ===
+        "high"
     )
   ) {
 
@@ -213,7 +223,8 @@ function deriveRiskLevel(
   if (
     flags.some(
       (flag) =>
-        flag.severity === "medium"
+        flag.severity ===
+        "medium"
     )
   ) {
 
@@ -227,12 +238,8 @@ function deriveRiskLevel(
 }
 
 
-
 // =============================================
-// Calculate rules rating from saved findings
-//
-// Used as fallback for claims saved before the
-// new database columns existed.
+// Derive rules rating for old claims
 // =============================================
 
 function deriveRulesRiskLevel(
@@ -241,16 +248,21 @@ function deriveRulesRiskLevel(
 
   const ruleFlags =
 
-    Array.isArray(flags)
+    Array.isArray(
+      flags
+    )
 
       ? flags.filter(
           (flag) => {
 
             const sources =
+
               Array.isArray(
                 flag.detectedBy
               )
+
                 ? flag.detectedBy
+
                 : ["rules"];
 
 
@@ -271,11 +283,8 @@ function deriveRulesRiskLevel(
 }
 
 
-
 // =============================================
-// Calculate AI rating from saved findings
-//
-// Used as fallback for older claims.
+// Derive AI rating for old claims
 // =============================================
 
 function deriveAiRiskLevel(
@@ -287,7 +296,9 @@ function deriveAiRiskLevel(
 
 
   if (
-    !Array.isArray(flags)
+    !Array.isArray(
+      flags
+    )
   ) {
 
     return "unavailable";
@@ -305,10 +316,8 @@ function deriveAiRiskLevel(
     ) {
 
       aiSeverities.push({
-
         severity:
           flag.aiReview.severity
-
       });
 
       continue;
@@ -326,10 +335,8 @@ function deriveAiRiskLevel(
     ) {
 
       aiSeverities.push({
-
         severity:
           flag.severity
-
       });
 
     }
@@ -353,9 +360,8 @@ function deriveAiRiskLevel(
 }
 
 
-
 // =============================================
-// Normalize claim database row
+// Normalize claim
 // =============================================
 
 function normalizeClaim(
@@ -371,65 +377,25 @@ function normalizeClaim(
   }
 
 
-  let diagnosisCodes =
-    [];
+  const diagnosisCodes =
+    parseJson(
+      row.diagnosis_codes,
+      []
+    );
 
 
-  let lineItems =
-    [];
+  const lineItems =
+    parseJson(
+      row.line_items,
+      []
+    );
 
 
-  let flags =
-    [];
-
-
-  try {
-
-    diagnosisCodes =
-      JSON.parse(
-        row.diagnosis_codes ||
-        "[]"
-      );
-
-  } catch {
-
-    diagnosisCodes =
-      [];
-
-  }
-
-
-  try {
-
-    lineItems =
-      JSON.parse(
-        row.line_items ||
-        "[]"
-      );
-
-  } catch {
-
-    lineItems =
-      [];
-
-  }
-
-
-  try {
-
-    flags =
-      JSON.parse(
-        row.flags ||
-        "[]"
-      );
-
-  } catch {
-
-    flags =
-      [];
-
-  }
-
+  const flags =
+    parseJson(
+      row.flags,
+      []
+    );
 
 
   const rulesRiskLevel =
@@ -507,7 +473,6 @@ function normalizeClaim(
 }
 
 
-
 // =============================================
 // Create claim
 // =============================================
@@ -519,31 +484,22 @@ export function createClaim(
 
   const statement =
     db.prepare(`
-
       INSERT INTO claims (
 
         claim_number,
-
         provider_name,
-
         patient_label,
 
         diagnosis_codes,
-
         clinical_note,
-
         line_items,
 
         total_billed,
-
         risk_score,
-
         review_amount,
 
         rules_risk_level,
-
         ai_risk_level,
-
         risk_level,
 
         flags
@@ -553,7 +509,6 @@ export function createClaim(
       VALUES (
         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
-
     `);
 
 
@@ -619,7 +574,6 @@ export function createClaim(
 }
 
 
-
 // =============================================
 // Get one claim
 // =============================================
@@ -630,16 +584,14 @@ export function getClaim(
 
   const row =
     db
-      .prepare(
-        `
-
-          SELECT *
-          FROM claims
-          WHERE id = ?
-
-        `
-      )
-      .get(id);
+      .prepare(`
+        SELECT *
+        FROM claims
+        WHERE id = ?
+      `)
+      .get(
+        id
+      );
 
 
   return normalizeClaim(
@@ -647,7 +599,6 @@ export function getClaim(
   );
 
 }
-
 
 
 // =============================================
@@ -658,15 +609,11 @@ export function listClaims() {
 
   const rows =
     db
-      .prepare(
-        `
-
-          SELECT *
-          FROM claims
-          ORDER BY id DESC
-
-        `
-      )
+      .prepare(`
+        SELECT *
+        FROM claims
+        ORDER BY id DESC
+      `)
       .all();
 
 
@@ -677,39 +624,37 @@ export function listClaims() {
 }
 
 
-
 // =============================================
-// Dashboard stats
+// Dashboard statistics
 // =============================================
 
 export function getDashboardStats() {
 
   const row =
     db
-      .prepare(
-        `
+      .prepare(`
+        SELECT
 
-          SELECT
+          COUNT(*) AS total_claims,
 
-            COUNT(*) AS total_claims,
+          SUM(
+            CASE
 
-            SUM(
-              CASE
-                WHEN risk_level != 'low'
-                THEN 1
-                ELSE 0
-              END
-            ) AS flagged_claims,
+              WHEN risk_level != 'low'
+              THEN 1
 
-            COALESCE(
-              SUM(review_amount),
-              0
-            ) AS review_amount
+              ELSE 0
 
-          FROM claims
+            END
+          ) AS flagged_claims,
 
-        `
-      )
+          COALESCE(
+            SUM(review_amount),
+            0
+          ) AS review_amount
+
+        FROM claims
+      `)
       .get();
 
 
@@ -738,6 +683,215 @@ export function getDashboardStats() {
 }
 
 
+// =============================================
+// Provider analytics
+//
+// IMPORTANT:
+// Counts UNIQUE bills using claim_number.
+//
+// If the same claim_number appears multiple times,
+// only the newest database row is counted.
+// =============================================
+
+export function getProviderRiskStats() {
+
+  const rows =
+    db
+      .prepare(`
+        WITH latest_unique_claims AS (
+
+          SELECT
+            c.id,
+            c.claim_number,
+            c.provider_name,
+            c.risk_level
+
+          FROM claims c
+
+          INNER JOIN (
+
+            SELECT
+
+              claim_number,
+
+              MAX(id) AS latest_id
+
+            FROM claims
+
+            GROUP BY claim_number
+
+          ) latest
+
+          ON c.id = latest.latest_id
+
+        )
+
+        SELECT
+
+          provider_name,
+
+          COUNT(*) AS total_claims,
+
+          SUM(
+            CASE
+
+              WHEN risk_level = 'low'
+              THEN 1
+
+              ELSE 0
+
+            END
+          ) AS low_claims,
+
+          SUM(
+            CASE
+
+              WHEN risk_level = 'review'
+              THEN 1
+
+              ELSE 0
+
+            END
+          ) AS review_claims,
+
+          SUM(
+            CASE
+
+              WHEN risk_level = 'high'
+              THEN 1
+
+              ELSE 0
+
+            END
+          ) AS high_claims
+
+        FROM latest_unique_claims
+
+        GROUP BY provider_name
+
+        ORDER BY
+
+          total_claims DESC,
+
+          provider_name ASC
+      `)
+      .all();
+
+
+  return rows.map(
+    (row) => {
+
+      const totalClaims =
+        Number(
+          row.total_claims ||
+          0
+        );
+
+
+      const lowClaims =
+        Number(
+          row.low_claims ||
+          0
+        );
+
+
+      const reviewClaims =
+        Number(
+          row.review_claims ||
+          0
+        );
+
+
+      const highClaims =
+        Number(
+          row.high_claims ||
+          0
+        );
+
+
+      const flaggedClaims =
+        reviewClaims +
+        highClaims;
+
+
+      const lowPercent =
+
+        totalClaims > 0
+
+          ? (
+              lowClaims /
+              totalClaims
+            ) * 100
+
+          : 0;
+
+
+      const reviewPercent =
+
+        totalClaims > 0
+
+          ? (
+              reviewClaims /
+              totalClaims
+            ) * 100
+
+          : 0;
+
+
+      const highPercent =
+
+        totalClaims > 0
+
+          ? (
+              highClaims /
+              totalClaims
+            ) * 100
+
+          : 0;
+
+
+      const flaggedPercent =
+
+        totalClaims > 0
+
+          ? (
+              flaggedClaims /
+              totalClaims
+            ) * 100
+
+          : 0;
+
+
+      return {
+
+        providerName:
+          row.provider_name,
+
+        totalClaims,
+
+        lowClaims,
+
+        reviewClaims,
+
+        highClaims,
+
+        flaggedClaims,
+
+        lowPercent,
+
+        reviewPercent,
+
+        highPercent,
+
+        flaggedPercent
+
+      };
+
+    }
+  );
+
+}
+
 
 // =============================================
 // Create Vapi call
@@ -750,13 +904,10 @@ export function createVapiCall(
 ) {
 
   db.prepare(`
-
     INSERT INTO vapi_calls (
 
       claim_number,
-
       vapi_call_id,
-
       status
 
     )
@@ -775,7 +926,6 @@ export function createVapiCall(
 
       updated_at =
         CURRENT_TIMESTAMP
-
   `).run(
 
     claimNumber,
@@ -794,7 +944,6 @@ export function createVapiCall(
 }
 
 
-
 // =============================================
 // Update Vapi status
 // =============================================
@@ -805,15 +954,16 @@ export function updateVapiCallStatus(
 ) {
 
   db.prepare(`
-
     UPDATE vapi_calls
 
     SET
+
       status = ?,
-      updated_at = CURRENT_TIMESTAMP
+
+      updated_at =
+        CURRENT_TIMESTAMP
 
     WHERE vapi_call_id = ?
-
   `).run(
 
     status,
@@ -823,7 +973,6 @@ export function updateVapiCallStatus(
   );
 
 }
-
 
 
 // =============================================
@@ -843,7 +992,6 @@ export function completeVapiCall(
 ) {
 
   db.prepare(`
-
     UPDATE vapi_calls
 
     SET
@@ -864,7 +1012,6 @@ export function completeVapiCall(
         CURRENT_TIMESTAMP
 
     WHERE vapi_call_id = ?
-
   `).run(
 
     status,
@@ -894,9 +1041,8 @@ export function completeVapiCall(
 }
 
 
-
 // =============================================
-// Normalize Vapi row
+// Normalize Vapi call
 // =============================================
 
 function normalizeVapiCall(
@@ -908,26 +1054,6 @@ function normalizeVapiCall(
   ) {
 
     return null;
-
-  }
-
-
-  let messages =
-    [];
-
-
-  try {
-
-    messages =
-      JSON.parse(
-        row.messages ||
-        "[]"
-      );
-
-  } catch {
-
-    messages =
-      [];
 
   }
 
@@ -952,7 +1078,11 @@ function normalizeVapiCall(
     transcript:
       row.transcript,
 
-    messages,
+    messages:
+      parseJson(
+        row.messages,
+        []
+      ),
 
     startedAt:
       row.started_at,
@@ -971,7 +1101,6 @@ function normalizeVapiCall(
 }
 
 
-
 // =============================================
 // Get Vapi call by call ID
 // =============================================
@@ -982,15 +1111,13 @@ export function getVapiCallByCallId(
 
   const row =
     db
-      .prepare(
-        `
+      .prepare(`
+        SELECT *
 
-          SELECT *
-          FROM vapi_calls
-          WHERE vapi_call_id = ?
+        FROM vapi_calls
 
-        `
-      )
+        WHERE vapi_call_id = ?
+      `)
       .get(
         callId
       );
@@ -1003,7 +1130,6 @@ export function getVapiCallByCallId(
 }
 
 
-
 // =============================================
 // Get Vapi calls for claim
 // =============================================
@@ -1014,18 +1140,15 @@ export function getVapiCallsForClaim(
 
   const rows =
     db
-      .prepare(
-        `
+      .prepare(`
+        SELECT *
 
-          SELECT *
-          FROM vapi_calls
+        FROM vapi_calls
 
-          WHERE claim_number = ?
+        WHERE claim_number = ?
 
-          ORDER BY id DESC
-
-        `
-      )
+        ORDER BY id DESC
+      `)
       .all(
         claimNumber
       );
@@ -1038,9 +1161,9 @@ export function getVapiCallsForClaim(
 }
 
 
-// --------------------------------------------------
-// Store or update a completed Vapi call transcript
-// --------------------------------------------------
+// =============================================
+// Legacy transcript helper
+// =============================================
 
 export function saveVapiCallTranscript({
   callId,
@@ -1052,17 +1175,12 @@ export function saveVapiCallTranscript({
 
   db
     .prepare(`
-
       INSERT INTO vapi_call_transcripts (
 
         call_id,
-
         claim_number,
-
         transcript,
-
         messages,
-
         ended_reason
 
       )
@@ -1070,50 +1188,77 @@ export function saveVapiCallTranscript({
       VALUES (?, ?, ?, ?, ?)
 
       ON CONFLICT(call_id)
+
       DO UPDATE SET
 
-        claim_number = excluded.claim_number,
+        claim_number =
+          excluded.claim_number,
 
-        transcript = excluded.transcript,
+        transcript =
+          excluded.transcript,
 
-        messages = excluded.messages,
+        messages =
+          excluded.messages,
 
-        ended_reason = excluded.ended_reason,
+        ended_reason =
+          excluded.ended_reason,
 
-        received_at = CURRENT_TIMESTAMP
-
+        received_at =
+          CURRENT_TIMESTAMP
     `)
     .run(
+
       callId,
-      claimNumber || null,
-      transcript || null,
-      JSON.stringify(messages || []),
-      endedReason || null
+
+      claimNumber ||
+        null,
+
+      transcript ||
+        null,
+
+      JSON.stringify(
+        messages ||
+        []
+      ),
+
+      endedReason ||
+        null
+
     );
 
 
-  return getVapiCallTranscript(callId);
+  return getVapiCallTranscript(
+    callId
+  );
 
 }
 
 
-// --------------------------------------------------
-// Retrieve one completed Vapi call transcript
-// --------------------------------------------------
+// =============================================
+// Legacy transcript lookup
+// =============================================
 
-export function getVapiCallTranscript(callId) {
+export function getVapiCallTranscript(
+  callId
+) {
 
   const row =
     db
       .prepare(`
         SELECT *
+
         FROM vapi_call_transcripts
+
         WHERE call_id = ?
       `)
-      .get(callId);
+      .get(
+        callId
+      );
 
 
-  if (!row) {
+  if (
+    !row
+  ) {
 
     return null;
 
@@ -1132,7 +1277,7 @@ export function getVapiCallTranscript(callId) {
       row.transcript,
 
     messages:
-      parse(
+      parseJson(
         row.messages,
         []
       ),
