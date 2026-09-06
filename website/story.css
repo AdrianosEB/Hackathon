@@ -427,18 +427,23 @@ html.engine [data-fade-out] { opacity: var(--o, 1); }
   gap: 6px;
 
   border: 1px solid var(--line-2);
-  background: rgba(14, 14, 18, .9);
+  background: #0E0E12;
   text-align: center;
+
+  /* Without this the far side of the box shows through the near
+     side, and its label reads mirrored. */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 /* Faces are shaded by orientation, so the sealed cube reads as a
    solid object rather than a flat diagram. */
-.fc-front  { background: rgba(22, 22, 28, .94); }
+.fc-front  { background: #16161C; }
 .fc-top,
-.fc-bottom { background: rgba(13, 13, 17, .92); }
+.fc-bottom { background: #0D0D11; }
 .fc-left,
-.fc-right  { background: rgba(9, 9, 12, .92);   }
-.fc-back   { background: rgba(6, 6, 9, .92);    }
+.fc-right  { background: #090A0C; }
+.fc-back   { background: #060609; }
 
 .fc b {
   font-family: var(--mono);
