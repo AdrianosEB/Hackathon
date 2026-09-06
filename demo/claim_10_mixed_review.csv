@@ -1,0 +1,4 @@
+claimNumber,providerName,patientLabel,diagnosisCodes,clinicalNote,code,description,serviceDate,units,amount
+CLM-10010,Cedar Grove Clinic,Patient J,R06.02,Patient reports shortness of breath during outpatient evaluation. Further routine testing was performed.,71046,Chest X-ray,2026-09-09,1,215
+CLM-10010,Cedar Grove Clinic,Patient J,R06.02,Patient reports shortness of breath during outpatient evaluation. Further routine testing was performed.,93000,Electrocardiogram,2026-09-09,1,130
+CLM-10010,Cedar Grove Clinic,Patient J,R06.02,Patient reports shortness of breath during outpatient evaluation. Further routine testing was performed.,99214,Office visit,2026-09-09,1,170

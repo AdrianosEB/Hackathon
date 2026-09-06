@@ -1,0 +1,21 @@
+claimNumber: CLM-10003
+providerName: Lakeside Health Clinic
+
+appealReason:
+Corrected billing amount
+
+appealNote:
+The ECG amount was entered incorrectly on the original claim. This appeal supplies the corrected billed amount.
+
+diagnosisCodes:
+R07.9
+
+clinicalNote:
+Patient reports intermittent chest discomfort and remains stable during outpatient evaluation.
+
+supportingEvidence:
+Corrected billing record confirms procedure 93000 should be billed at $50 rather than the amount on the original submission.
+
+lineItems:
+93000 | Electrocardiogram | 2026-09-03 | 1 | 50
+99214 | Office visit | 2026-09-03 | 1 | 190

@@ -1,0 +1,3 @@
+claimNumber,providerName,patientLabel,diagnosisCodes,clinicalNote,code,description,serviceDate,units,amount
+CLM-10002,Riverside Family Practice,Patient B,R53.83,Patient reports mild fatigue. Routine examination performed with no acute concerns documented.,99214,Office visit,2026-09-02,1,160
+CLM-10002,Riverside Family Practice,Patient B,R53.83,Patient reports mild fatigue. Routine examination performed with no acute concerns documented.,80053,Comprehensive metabolic panel,2026-09-02,1,35

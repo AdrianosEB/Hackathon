@@ -1,0 +1,4 @@
+claimNumber,providerName,patientLabel,diagnosisCodes,clinicalNote,code,description,serviceDate,units,amount
+CLM-10009,Summit Medical Associates,Patient I,M54.50,Patient evaluated for lower back pain during an outpatient visit. No acute neurologic symptoms documented.,99214,Office visit,2026-09-08,1,165
+CLM-10009,Summit Medical Associates,Patient I,M54.50,Patient evaluated for lower back pain during an outpatient visit. No acute neurologic symptoms documented.,99214,Office visit,2026-09-08,1,165
+CLM-10009,Summit Medical Associates,Patient I,M54.50,Patient evaluated for lower back pain during an outpatient visit. No acute neurologic symptoms documented.,93000,Electrocardiogram,2026-09-08,1,50

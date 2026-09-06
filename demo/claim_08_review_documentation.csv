@@ -1,0 +1,3 @@
+claimNumber,providerName,patientLabel,diagnosisCodes,clinicalNote,code,description,serviceDate,units,amount
+CLM-10008,Harbor Internal Medicine,Patient H,R51.9,Brief visit note.,99215,High-complexity office visit,2026-09-07,1,230
+CLM-10008,Harbor Internal Medicine,Patient H,R51.9,Brief visit note.,80053,Comprehensive metabolic panel,2026-09-07,1,35

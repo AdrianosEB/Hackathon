@@ -11,9 +11,7 @@
     content="width=device-width, initial-scale=1.0"
   />
 
-  <title>
-    Claim Integrity
-  </title>
+  <title>Claim Integrity</title>
 
   <link
     rel="stylesheet"
@@ -25,6 +23,9 @@
 
 <body>
 
+  <!-- ==========================================
+       TOP BAR
+  =========================================== -->
 
   <header class="topbar">
 
@@ -33,294 +34,638 @@
     </div>
 
 
-    <div class="demo-controls">
-
-      <select id="demoSelect">
-
-        <option value="clean">
-          Demo 1 — Clean
-        </option>
-
-        <option value="review">
-          Demo 2 — Review
-        </option>
-
-        <option value="high">
-          Demo 3 — High Risk
-        </option>
-
-      </select>
-
+    <div class="topbar-center">
 
       <button
-        id="demoBtn"
-        class="secondary"
+        id="claimsModeButton"
+        class="mode-button active"
         type="button"
       >
-        Load Test
+        Claims
       </button>
+
+      <button
+        id="appealsModeButton"
+        class="mode-button"
+        type="button"
+      >
+        Appeals
+      </button>
+
+    </div>
+
+
+    <div class="topbar-actions">
+
+      <button
+        id="providerAnalyticsButton"
+        class="analytics-button"
+        type="button"
+      >
+        Provider Analytics
+      </button>
+
+      <span
+        id="headerStatus"
+        class="topbar-status"
+      >
+        Ready
+      </span>
 
     </div>
 
   </header>
 
 
+  <!-- ==========================================
+       CLAIMS MODE
+  =========================================== -->
 
-  <main class="app-shell">
+  <main
+    id="claimsMode"
+    class="app-shell"
+  >
 
+    <!-- ========================================
+         LEFT — CLAIM IMPORT
+    ========================================= -->
 
-    <!-- =========================================
-         PAST CLAIMS
-    ========================================== -->
+    <section class="import-panel">
 
-    <aside class="claims-sidebar">
+      <div class="panel-heading">
 
-      <div class="sidebar-header">
-
-        <h2>
-          Past Claims
-        </h2>
-
-      </div>
-
-
-      <div class="table-wrap">
-
-        <table class="claims-table">
-
-          <thead>
-
-            <tr>
-
-              <th>
-                Claim
-              </th>
-
-              <th>
-                Provider
-              </th>
-
-              <th>
-                Rules
-              </th>
-
-              <th>
-                AI
-              </th>
-
-              <th>
-                Final
-              </th>
-
-            </tr>
-
-          </thead>
-
-
-          <tbody id="claimsTable">
-
-            <tr>
-
-              <td
-                colspan="5"
-                class="muted"
-              >
-                No claims yet.
-              </td>
-
-            </tr>
-
-          </tbody>
-
-        </table>
-
-      </div>
-
-    </aside>
-
-
-
-    <!-- =========================================
-         WORKSPACE
-    ========================================== -->
-
-    <section class="workspace">
-
-
-      <!-- =======================================
-           NEW CLAIM
-      ======================================== -->
-
-      <section class="panel form-panel">
-
-        <div class="section-header">
+        <div>
 
           <h2>
-            New Claim
+            Import Claims
           </h2>
 
+          <p>
+            One bill per CSV file
+          </p>
+
         </div>
 
-
-        <form id="claimForm">
-
-
-          <div class="two-col">
+      </div>
 
 
-            <label>
-
-              Claim number
-
-              <input
-                id="claimNumber"
-                required
-                placeholder="CLM-10429"
-              />
-
-            </label>
-
-
-
-            <label>
-
-              Provider
-
-              <input
-                id="providerName"
-                required
-                placeholder="Northside Medical Center"
-              />
-
-            </label>
-
-
-          </div>
-
-
-
-          <div class="two-col">
-
-
-            <label>
-
-              Patient label
-
-              <input
-                id="patientLabel"
-                placeholder="Patient A"
-              />
-
-            </label>
-
-
-
-            <label>
-
-              Diagnosis codes
-
-              <input
-                id="diagnosisCodes"
-                placeholder="R10.9, R11.0"
-              />
-
-            </label>
-
-
-          </div>
-
-
-
-          <label>
-
-            Clinical note
-
-            <textarea
-              id="clinicalNote"
-              rows="4"
-              placeholder="Clinical note"
-            ></textarea>
-
-          </label>
-
-
-
-          <div class="line-header">
-
-            <h3>
-              Claim Lines
-            </h3>
-
-
-            <button
-              type="button"
-              id="addLineBtn"
-              class="text-btn"
-            >
-              + Add line
-            </button>
-
-          </div>
-
-
-
-          <div
-            id="lineItems"
-            class="line-items"
-          ></div>
-
-
-
-          <div
-            id="formError"
-            class="error hidden"
-          ></div>
-
-
-
-          <button
-            class="primary"
-            type="submit"
-          >
-            Analyze Claim
-          </button>
-
-
-        </form>
-
-      </section>
-
-
-
-      <!-- =======================================
-           RESULT
-      ======================================== -->
-
-      <section
-        class="panel result-panel"
-        id="resultPanel"
+      <label
+        class="upload-box"
+        for="csvFiles"
       >
 
-        <div
-          id="emptyResult"
-          class="empty"
-        >
-          Select a past claim or analyze a new claim.
+        <strong>
+          Choose CSV Files
+        </strong>
+
+        <span>
+          Select one or multiple bills
+        </span>
+
+        <input
+          id="csvFiles"
+          type="file"
+          accept=".csv,text/csv"
+          multiple
+        />
+
+      </label>
+
+
+      <div
+        id="batchSummary"
+        class="batch-summary hidden"
+      >
+
+        <div>
+
+          <span>
+            Files
+          </span>
+
+          <strong id="totalFiles">
+            0
+          </strong>
+
         </div>
 
 
+        <div>
+
+          <span>
+            Analyzed
+          </span>
+
+          <strong id="completedFiles">
+            0
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            Failed
+          </span>
+
+          <strong id="failedFiles">
+            0
+          </strong>
+
+        </div>
+
+      </div>
+
+
+      <div
+        id="progressWrap"
+        class="progress-wrap hidden"
+      >
+
+        <div class="progress-track">
+
+          <div
+            id="progressBar"
+            class="progress-bar"
+          ></div>
+
+        </div>
+
         <div
-          id="resultContent"
-          class="hidden"
-        ></div>
+          id="progressText"
+          class="muted"
+        >
+          0 / 0
+        </div>
 
-      </section>
+      </div>
 
+
+      <div
+        id="importError"
+        class="error hidden"
+      ></div>
+
+
+      <div class="section-label">
+        Import Queue
+      </div>
+
+      <div
+        id="fileQueue"
+        class="file-queue"
+      >
+
+        <div class="empty-small">
+          No files selected.
+        </div>
+
+      </div>
+
+
+      <div class="call-queue-section">
+
+        <div class="call-queue-heading">
+
+          <h3>
+            Call Queue
+          </h3>
+
+          <span
+            id="callQueueCount"
+            class="queue-count"
+          >
+            0
+          </span>
+
+        </div>
+
+        <div
+          id="callQueue"
+          class="call-queue"
+        >
+
+          <div class="empty-small">
+            No clarification calls queued.
+          </div>
+
+        </div>
+
+      </div>
 
     </section>
 
 
+    <!-- ========================================
+         RIGHT — CLAIMS
+    ========================================= -->
+
+    <section class="claims-panel">
+
+      <div class="panel-heading">
+
+        <div>
+
+          <h2>
+            Analyzed Claims
+          </h2>
+
+          <p>
+            Select a claim to inspect its evidence
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="claims-workspace">
+
+        <aside class="claim-list-pane">
+
+          <div
+            id="claimsList"
+            class="claims-list"
+          >
+
+            <div class="empty-small">
+              No analyzed claims yet.
+            </div>
+
+          </div>
+
+        </aside>
+
+
+        <section class="claim-detail-pane">
+
+          <div
+            id="emptyResult"
+            class="empty-result"
+          >
+            Select an analyzed claim.
+          </div>
+
+          <div
+            id="resultContent"
+            class="hidden"
+          ></div>
+
+        </section>
+
+      </div>
+
+    </section>
+
   </main>
+
+
+  <!-- ==========================================
+       APPEALS MODE
+  =========================================== -->
+
+  <main
+    id="appealsMode"
+    class="app-shell hidden"
+  >
+
+    <!-- ========================================
+         LEFT — APPEAL IMPORT
+    ========================================= -->
+
+    <section class="import-panel">
+
+      <div class="panel-heading">
+
+        <div>
+
+          <h2>
+            Import Appeals
+          </h2>
+
+          <p>
+            One appeal per TXT file
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <label
+        class="upload-box"
+        for="appealTxtFiles"
+      >
+
+        <strong>
+          Choose Appeal TXT Files
+        </strong>
+
+        <span>
+          Select one or multiple appeals
+        </span>
+
+        <input
+          id="appealTxtFiles"
+          type="file"
+          accept=".txt,text/plain"
+          multiple
+        />
+
+      </label>
+
+
+      <div
+        id="appealBatchSummary"
+        class="batch-summary hidden"
+      >
+
+        <div>
+
+          <span>
+            Files
+          </span>
+
+          <strong id="appealTotalFiles">
+            0
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            Analyzed
+          </span>
+
+          <strong id="appealCompletedFiles">
+            0
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            Failed
+          </span>
+
+          <strong id="appealFailedFiles">
+            0
+          </strong>
+
+        </div>
+
+      </div>
+
+
+      <div
+        id="appealProgressWrap"
+        class="progress-wrap hidden"
+      >
+
+        <div class="progress-track">
+
+          <div
+            id="appealProgressBar"
+            class="progress-bar"
+          ></div>
+
+        </div>
+
+        <div
+          id="appealProgressText"
+          class="muted"
+        >
+          0 / 0
+        </div>
+
+      </div>
+
+
+      <div
+        id="appealImportError"
+        class="error hidden"
+      ></div>
+
+
+      <div class="section-label">
+        Appeal Import Queue
+      </div>
+
+      <div
+        id="appealFileQueue"
+        class="file-queue"
+      >
+
+        <div class="empty-small">
+          No appeal files selected.
+        </div>
+
+      </div>
+
+
+      <div class="appeal-help">
+
+        <strong>
+          Appeal TXT Format
+        </strong>
+
+        <p>
+          Each text file links to the original claim using
+          claimNumber and contains the provider's corrected
+          billing information and supporting evidence.
+        </p>
+
+      </div>
+
+    </section>
+
+
+    <!-- ========================================
+         RIGHT — APPEALS
+    ========================================= -->
+
+    <section class="claims-panel">
+
+      <div class="panel-heading appeal-heading">
+
+        <div>
+
+          <h2>
+            Appeals
+          </h2>
+
+          <p>
+            Review whether new evidence resolves the original concern
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <!-- ======================================
+           APPEAL FILTERS
+      ======================================= -->
+
+      <div class="appeal-view-tabs">
+
+        <button
+          id="appealAllButton"
+          class="appeal-view-button active"
+          type="button"
+          data-appeal-view="all"
+        >
+          ALL
+
+          <span id="appealAllCount">
+            0
+          </span>
+
+        </button>
+
+
+        <button
+          id="appealPendingButton"
+          class="appeal-view-button"
+          type="button"
+          data-appeal-view="pending"
+        >
+          PENDING
+
+          <span id="appealPendingCount">
+            0
+          </span>
+
+        </button>
+
+
+        <button
+          id="appealCompletedButton"
+          class="appeal-view-button"
+          type="button"
+          data-appeal-view="completed"
+        >
+          COMPLETED
+
+          <span id="appealCompletedCount">
+            0
+          </span>
+
+        </button>
+
+      </div>
+
+
+      <!-- ======================================
+           APPEAL WORKSPACE
+      ======================================= -->
+
+      <div class="claims-workspace appeals-workspace">
+
+        <!-- Appeal list -->
+
+        <aside class="claim-list-pane">
+
+          <div
+            id="appealsList"
+            class="claims-list"
+          >
+
+            <div class="empty-small">
+              No appeals yet.
+            </div>
+
+          </div>
+
+        </aside>
+
+
+        <!-- Appeal detail -->
+
+        <section class="claim-detail-pane">
+
+          <div
+            id="emptyAppealResult"
+            class="empty-result"
+          >
+            Select an appeal.
+          </div>
+
+          <div
+            id="appealResultContent"
+            class="hidden"
+          ></div>
+
+        </section>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <!-- ==========================================
+       PROVIDER ANALYTICS
+  =========================================== -->
+
+  <div
+    id="providerAnalyticsModal"
+    class="modal-overlay hidden"
+  >
+
+    <div class="analytics-modal">
+
+      <div class="analytics-modal-header">
+
+        <div>
+
+          <span class="eyebrow">
+            Portfolio View
+          </span>
+
+          <h2>
+            Provider Analytics
+          </h2>
+
+          <p>
+            Review and high-risk rates across analyzed bills
+          </p>
+
+        </div>
+
+
+        <button
+          id="closeProviderAnalytics"
+          class="modal-close"
+          type="button"
+          aria-label="Close provider analytics"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <div
+        id="providerAnalyticsContent"
+        class="analytics-content"
+      >
+
+        <div class="empty-small">
+          Loading provider analytics...
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
 
 
   <script src="/script.js"></script>

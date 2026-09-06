@@ -1,0 +1,22 @@
+claimNumber: CLM-10010
+providerName: Cedar Grove Clinic
+
+appealReason:
+Provider disputes price findings
+
+appealNote:
+The provider requests reconsideration but submits the same billed amounts and provides no corrected pricing information.
+
+diagnosisCodes:
+R06.02
+
+clinicalNote:
+Patient reports shortness of breath during outpatient evaluation. Further routine testing was performed.
+
+supportingEvidence:
+The appeal repeats the original billed amounts without a pricing correction.
+
+lineItems:
+71046 | Chest X-ray | 2026-09-09 | 1 | 215
+93000 | Electrocardiogram | 2026-09-09 | 1 | 130
+99214 | Office visit | 2026-09-09 | 1 | 170

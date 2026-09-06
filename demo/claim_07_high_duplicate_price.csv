@@ -1,0 +1,4 @@
+claimNumber,providerName,patientLabel,diagnosisCodes,clinicalNote,code,description,serviceDate,units,amount
+CLM-10007,Metro Diagnostic Center,Patient G,R10.84,Patient reports diffuse abdominal discomfort with otherwise stable outpatient presentation.,74177,CT abdomen/pelvis,2026-09-06,1,1850
+CLM-10007,Metro Diagnostic Center,Patient G,R10.84,Patient reports diffuse abdominal discomfort with otherwise stable outpatient presentation.,74177,CT abdomen/pelvis,2026-09-06,1,1850
+CLM-10007,Metro Diagnostic Center,Patient G,R10.84,Patient reports diffuse abdominal discomfort with otherwise stable outpatient presentation.,99215,High-complexity office visit,2026-09-06,1,620

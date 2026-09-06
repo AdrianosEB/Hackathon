@@ -1,0 +1,21 @@
+claimNumber: CLM-10005
+providerName: Downtown Primary Care
+
+appealReason:
+Missing diagnosis information supplied
+
+appealNote:
+The original claim omitted the diagnosis code. This appeal supplies the missing diagnosis information associated with the documented follow-up visit.
+
+diagnosisCodes:
+Z09
+
+clinicalNote:
+Routine outpatient follow-up visit documented. The diagnosis information omitted from the original submission is included with this appeal.
+
+supportingEvidence:
+Corrected claim submission adds diagnosis code Z09 while preserving the original billing lines.
+
+lineItems:
+99213 | Office visit | 2026-09-05 | 1 | 108
+80053 | Comprehensive metabolic panel | 2026-09-05 | 1 | 36

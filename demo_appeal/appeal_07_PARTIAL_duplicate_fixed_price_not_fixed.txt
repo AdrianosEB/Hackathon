@@ -1,0 +1,21 @@
+claimNumber: CLM-10007
+providerName: Metro Diagnostic Center
+
+appealReason:
+Duplicate line corrected
+
+appealNote:
+The duplicate CT line was entered in error and has been removed. The submitted billed amounts are otherwise unchanged.
+
+diagnosisCodes:
+R10.84
+
+clinicalNote:
+Patient reports diffuse abdominal discomfort. This appeal corrects the duplicate billing line but does not submit corrected charge amounts.
+
+supportingEvidence:
+Corrected record contains one CT line instead of two. The CT amount remains $1,850 and the office visit amount remains $620.
+
+lineItems:
+74177 | CT abdomen/pelvis | 2026-09-06 | 1 | 1850
+99215 | High-complexity office visit | 2026-09-06 | 1 | 620

@@ -1,0 +1,3 @@
+claimNumber,providerName,patientLabel,diagnosisCodes,clinicalNote,code,description,serviceDate,units,amount
+CLM-10004,Green Valley Medical Group,Patient D,R53.1,Patient reports generalized weakness. Laboratory testing ordered during routine outpatient evaluation.,85025,Complete blood count,2026-09-04,6,25
+CLM-10004,Green Valley Medical Group,Patient D,R53.1,Patient reports generalized weakness. Laboratory testing ordered during routine outpatient evaluation.,99213,Office visit,2026-09-04,1,110

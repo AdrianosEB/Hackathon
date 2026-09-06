@@ -1,0 +1,21 @@
+claimNumber: CLM-10008
+providerName: Harbor Internal Medicine
+
+appealReason:
+Additional documentation supplied
+
+appealNote:
+The original note was incomplete. This appeal supplies fuller encounter documentation for the billed high-complexity visit.
+
+diagnosisCodes:
+R51.9
+
+clinicalNote:
+Patient was evaluated for persistent headache. The clinician documented symptom history, reviewed relevant prior information, performed an outpatient assessment, discussed the evaluation plan, and recorded follow-up instructions for the patient.
+
+supportingEvidence:
+Expanded encounter documentation is supplied to address the original documentation screening concern.
+
+lineItems:
+99215 | High-complexity office visit | 2026-09-07 | 1 | 230
+80053 | Comprehensive metabolic panel | 2026-09-07 | 1 | 35

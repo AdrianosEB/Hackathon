@@ -1,0 +1,20 @@
+claimNumber: CLM-10006
+providerName: Northside Medical Center
+
+appealReason:
+Duplicate line removed and documentation clarified
+
+appealNote:
+The second CT line was a duplicate data-entry error and has been removed. Only one CT service was performed.
+
+diagnosisCodes:
+R10.9
+
+clinicalNote:
+Patient was evaluated for abdominal discomfort. A single CT abdomen and pelvis was performed on the listed service date. The corrected billing record contains one service only, and the duplicate entry from the original submission has been removed.
+
+supportingEvidence:
+Corrected billing record contains exactly one 74177 line for the service date and documents that no second CT was performed.
+
+lineItems:
+74177 | CT abdomen/pelvis | 2026-09-05 | 1 | 450

@@ -1,0 +1,21 @@
+claimNumber: CLM-10004
+providerName: Green Valley Medical Group
+
+appealReason:
+Corrected units
+
+appealNote:
+The CBC line was accidentally submitted with six units. The corrected appeal reflects one unit performed on the service date.
+
+diagnosisCodes:
+R53.1
+
+clinicalNote:
+Patient reports generalized weakness. Laboratory testing was ordered during a routine outpatient evaluation.
+
+supportingEvidence:
+Corrected billing record confirms that only one unit of procedure 85025 was performed and billed.
+
+lineItems:
+85025 | Complete blood count | 2026-09-04 | 1 | 25
+99213 | Office visit | 2026-09-04 | 1 | 110
