@@ -5,7 +5,8 @@
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="color-scheme" content="dark" />
+  <meta name="color-scheme" content="light" />
+  <meta name="theme-color" content="#fbfaf8" />
 
   <title>Claim Integrity — the story</title>
 
@@ -37,8 +38,12 @@
 
   <!-- persistent chrome -->
   <header class="chrome">
-    <span class="mark">CLAIM&nbsp;INTEGRITY</span>
-    <a class="chrome-link" href="/">DASHBOARD&nbsp;↗</a>
+    <a class="mark" href="/story" aria-label="Claim Integrity story">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>Claim Integrity</span>
+    </a>
+    <span class="story-nav" aria-current="page">Story</span>
+    <a class="chrome-link" href="/dashboard">Open dashboard <span aria-hidden="true">→</span></a>
   </header>
 
   <div class="scene-tag"><span id="sceneTag">SCENE 01</span></div>
@@ -113,29 +118,36 @@
 
       <div class="act-head">
         <p class="micro">THE METHOD</p>
-        <h2 class="big" data-anim="wipe">SEPARATE<br />QUESTIONS.</h2>
+        <h2 class="big" data-anim="wipe">TWO QUESTIONS.<br />NOT ONE SCORE.</h2>
+        <p class="act-sub">
+          “Axis” just means a separate measurement. One measures what needs review in this
+          bill; the other measures how complete and consistent the provider record is. They do
+          not add together, because a billing issue is not evidence about a provider.
+        </p>
       </div>
 
       <div class="axis-pair">
 
         <article class="axis-block" data-split style="--sx: 51%">
           <p class="axis-n">01</p>
-          <h3>THE CLAIM</h3>
+          <h3>THIS BILL</h3>
           <p class="axis-body">
             Deterministic rules over the line items — repeated codes, units out of band, prices
             that do not match — and then a second, separate pass where a model reads the note
-            against what was billed. Every finding says which of the two found it.
+            against what was billed. This answers: <strong>how much should a person review this
+            claim?</strong> Every finding says which of the two found it.
           </p>
-          <p class="axis-out">OUTPUT · RISK SCORE 0–100 · LOW / REVIEW / HIGH</p>
+          <p class="axis-out">OUTPUT · REVIEW PRIORITY 0–100 · LOW / REVIEW / HIGH</p>
         </article>
 
         <article class="axis-block" data-split style="--sx: -51%">
           <p class="axis-n">02</p>
-          <h3>THE RECORD</h3>
+          <h3>THE PROVIDER RECORD</h3>
           <p class="axis-body">
             An agent panel queries the federal registry and reports what corroborates and what
-            does not. Slow, fallible, and never allowed to block intake. A low score is a
-            statement about the evidence, never about the provider.
+            does not. This answers: <strong>how much evidence do we have that this record is
+            complete and consistent?</strong> It is slow, fallible, and never allowed to block
+            intake. A low score is a statement about the evidence, never about the provider.
           </p>
           <p class="axis-out">OUTPUT · DATA CONFIDENCE 0–100 · CONFIRMED / PROBABLE / INCOMPLETE / CONFLICTING</p>
         </article>

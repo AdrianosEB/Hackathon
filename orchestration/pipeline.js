@@ -56,11 +56,25 @@ const TIMED_OUT =
 
 
 function withTimeout(
-  promise,
+  run,
   milliseconds
 ) {
 
   let timer;
+
+
+  const controller =
+    new AbortController();
+
+
+  const promise =
+    Promise.resolve()
+      .then(
+        () =>
+          run(
+            controller.signal
+          )
+      );
 
 
   const timeout =
@@ -70,10 +84,15 @@ function withTimeout(
 
         timer =
           setTimeout(
-            () =>
+            () => {
+
               resolve(
                 TIMED_OUT
-              ),
+              );
+
+              controller.abort();
+
+            },
             milliseconds
           );
 
@@ -230,7 +249,7 @@ export async function runReviewPipeline(
 
     const settled =
       await withTimeout(
-        runAi(),
+        runAi,
         AI_TIMEOUT_MS
       );
 

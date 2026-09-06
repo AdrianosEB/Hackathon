@@ -528,9 +528,10 @@ export async function orchestrateClaim(
       // --------------------------------------------
 
       runAi:
-        () =>
+        (signal) =>
           reviewClaimWithAI(
-            claim
+            claim,
+            { signal }
           ),
 
 

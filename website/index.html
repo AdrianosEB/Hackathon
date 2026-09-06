@@ -1,675 +1,194 @@
 <!doctype html>
-
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#fbfaf8" />
+    <title>Claim Integrity | Dashboard</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="/story" aria-label="Claim Integrity story">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>Claim Integrity</span>
+        </a>
 
-<head>
+        <nav class="topbar-center" aria-label="Dashboard section">
+          <button id="claimsModeButton" class="mode-button active" type="button">Claims</button>
+          <button id="appealsModeButton" class="mode-button" type="button">Appeals</button>
+        </nav>
 
-  <meta charset="UTF-8" />
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  />
-
-  <title>Claim Integrity</title>
-
-  <link
-    rel="stylesheet"
-    href="/style.css"
-  />
-
-</head>
-
-
-<body>
-
-  <!-- ==========================================
-       TOP BAR
-  =========================================== -->
-
-  <header class="topbar">
-
-    <div class="brand">
-      Claim Integrity
-    </div>
-
-
-    <div class="topbar-center">
-
-      <button
-        id="claimsModeButton"
-        class="mode-button active"
-        type="button"
-      >
-        Claims
-      </button>
-
-      <button
-        id="appealsModeButton"
-        class="mode-button"
-        type="button"
-      >
-        Appeals
-      </button>
-
-    </div>
-
-
-    <div class="topbar-actions">
-
-      <button
-        id="providerAnalyticsButton"
-        class="analytics-button"
-        type="button"
-      >
-        Provider Analytics
-      </button>
-
-      <span
-        id="headerStatus"
-        class="topbar-status"
-      >
-        Ready
-      </span>
-
-    </div>
-
-  </header>
-
-
-  <!-- ==========================================
-       CLAIMS MODE
-  =========================================== -->
-
-  <main
-    id="claimsMode"
-    class="app-shell"
-  >
-
-    <!-- ========================================
-         LEFT — CLAIM IMPORT
-    ========================================= -->
-
-    <section class="import-panel">
-
-      <div class="panel-heading">
-
-        <div>
-
-          <h2>
-            Import Claims
-          </h2>
-
-          <p>
-            One bill per CSV file
-          </p>
-
+        <div class="topbar-actions">
+          <span id="headerStatus" class="topbar-status" role="status">Ready</span>
+          <button id="providerAnalyticsTopButton" class="header-analytics" type="button">
+            Provider analytics
+          </button>
+          <button id="queueButton" class="header-action" type="button" aria-expanded="false" aria-controls="activityQueuePopover">
+            Queue <span id="queueCount" class="header-action-count">0</span>
+          </button>
+          <button id="uploadButton" class="header-primary" type="button" aria-expanded="false" aria-controls="uploadPopover">Upload claims</button>
         </div>
 
-      </div>
-
-
-      <label
-        class="upload-box"
-        for="csvFiles"
-      >
-
-        <strong>
-          Choose CSV Files
-        </strong>
-
-        <span>
-          Select one or multiple bills
-        </span>
-
-        <input
-          id="csvFiles"
-          type="file"
-          accept=".csv,text/csv"
-          multiple
-        />
-
-      </label>
-
-
-      <div
-        id="batchSummary"
-        class="batch-summary hidden"
-      >
-
-        <div>
-
-          <span>
-            Files
-          </span>
-
-          <strong id="totalFiles">
-            0
-          </strong>
-
-        </div>
-
-
-        <div>
-
-          <span>
-            Analyzed
-          </span>
-
-          <strong id="completedFiles">
-            0
-          </strong>
-
-        </div>
-
-
-        <div>
-
-          <span>
-            Failed
-          </span>
-
-          <strong id="failedFiles">
-            0
-          </strong>
-
-        </div>
-
-      </div>
-
-
-      <div
-        id="progressWrap"
-        class="progress-wrap hidden"
-      >
-
-        <div class="progress-track">
-
-          <div
-            id="progressBar"
-            class="progress-bar"
-          ></div>
-
-        </div>
-
-        <div
-          id="progressText"
-          class="muted"
-        >
-          0 / 0
-        </div>
-
-      </div>
-
-
-      <div
-        id="importError"
-        class="error hidden"
-      ></div>
-
-
-      <div class="section-label">
-        Import Queue
-      </div>
-
-      <div
-        id="fileQueue"
-        class="file-queue"
-      >
-
-        <div class="empty-small">
-          No files selected.
-        </div>
-
-      </div>
-
-
-      <div class="call-queue-section">
-
-        <div class="call-queue-heading">
-
-          <h3>
-            Call Queue
-          </h3>
-
-          <span
-            id="callQueueCount"
-            class="queue-count"
-          >
-            0
-          </span>
-
-        </div>
-
-        <div
-          id="callQueue"
-          class="call-queue"
-        >
-
-          <div class="empty-small">
-            No clarification calls queued.
+        <div id="activityQueuePopover" class="header-popover hidden" aria-label="Activity queue">
+          <div class="popover-heading">
+            <strong>Activity queue</strong>
+            <span id="queueSummary">Nothing queued</span>
           </div>
-
+          <div id="claimsQueueContent">
+            <div class="popover-label">Imports</div>
+            <div id="fileQueue" class="file-queue"><div class="empty-small">No files selected.</div></div>
+            <div class="popover-label call-label">Clarification calls <span id="callQueueCount" class="queue-count">0</span></div>
+            <div id="callQueue" class="call-queue"><div class="empty-small">No clarification calls queued.</div></div>
+          </div>
+          <div id="appealsQueueContent" class="hidden">
+            <div class="popover-label">Appeal imports</div>
+            <div id="appealFileQueue" class="file-queue"><div class="empty-small">No appeal files selected.</div></div>
+          </div>
+          <div class="popover-footer">
+            <button id="providerAnalyticsButton" class="popover-analytics" type="button">Provider analytics</button>
+          </div>
         </div>
 
-      </div>
-
-    </section>
-
-
-    <!-- ========================================
-         RIGHT — CLAIMS
-    ========================================= -->
-
-    <section class="claims-panel">
-
-      <div class="panel-heading">
-
-        <div>
-
-          <h2>
-            Analyzed Claims
-          </h2>
-
-          <p>
-            Select a claim to inspect its evidence
-          </p>
-
-        </div>
-
-      </div>
-
-
-      <div class="claims-workspace">
-
-        <aside class="claim-list-pane">
-
-          <div
-            id="claimsList"
-            class="claims-list"
-          >
-
-            <div class="empty-small">
-              No analyzed claims yet.
+        <div id="uploadPopover" class="header-popover upload-popover hidden" aria-label="Upload files">
+          <div id="claimsUploadPanel">
+            <div class="popover-heading"><strong>Import claims</strong><span>One bill per CSV</span></div>
+            <label class="upload-box compact-upload" for="csvFiles">
+              <span class="upload-icon" aria-hidden="true">↑</span>
+              <strong>Choose CSV files</strong>
+              <span>Select one or more bills</span>
+              <input id="csvFiles" type="file" accept=".csv,text/csv" multiple />
+            </label>
+            <div id="batchSummary" class="batch-summary hidden" aria-live="polite">
+              <div><span>Files</span><strong id="totalFiles">0</strong></div>
+              <div><span>Analyzed</span><strong id="completedFiles">0</strong></div>
+              <div><span>Failed</span><strong id="failedFiles">0</strong></div>
             </div>
-
-          </div>
-
-        </aside>
-
-
-        <section class="claim-detail-pane">
-
-          <div
-            id="emptyResult"
-            class="empty-result"
-          >
-            Select an analyzed claim.
-          </div>
-
-          <div
-            id="resultContent"
-            class="hidden"
-          ></div>
-
-        </section>
-
-      </div>
-
-    </section>
-
-  </main>
-
-
-  <!-- ==========================================
-       APPEALS MODE
-  =========================================== -->
-
-  <main
-    id="appealsMode"
-    class="app-shell hidden"
-  >
-
-    <!-- ========================================
-         LEFT — APPEAL IMPORT
-    ========================================= -->
-
-    <section class="import-panel">
-
-      <div class="panel-heading">
-
-        <div>
-
-          <h2>
-            Import Appeals
-          </h2>
-
-          <p>
-            One appeal per TXT file
-          </p>
-
-        </div>
-
-      </div>
-
-
-      <label
-        class="upload-box"
-        for="appealTxtFiles"
-      >
-
-        <strong>
-          Choose Appeal TXT Files
-        </strong>
-
-        <span>
-          Select one or multiple appeals
-        </span>
-
-        <input
-          id="appealTxtFiles"
-          type="file"
-          accept=".txt,text/plain"
-          multiple
-        />
-
-      </label>
-
-
-      <div
-        id="appealBatchSummary"
-        class="batch-summary hidden"
-      >
-
-        <div>
-
-          <span>
-            Files
-          </span>
-
-          <strong id="appealTotalFiles">
-            0
-          </strong>
-
-        </div>
-
-
-        <div>
-
-          <span>
-            Analyzed
-          </span>
-
-          <strong id="appealCompletedFiles">
-            0
-          </strong>
-
-        </div>
-
-
-        <div>
-
-          <span>
-            Failed
-          </span>
-
-          <strong id="appealFailedFiles">
-            0
-          </strong>
-
-        </div>
-
-      </div>
-
-
-      <div
-        id="appealProgressWrap"
-        class="progress-wrap hidden"
-      >
-
-        <div class="progress-track">
-
-          <div
-            id="appealProgressBar"
-            class="progress-bar"
-          ></div>
-
-        </div>
-
-        <div
-          id="appealProgressText"
-          class="muted"
-        >
-          0 / 0
-        </div>
-
-      </div>
-
-
-      <div
-        id="appealImportError"
-        class="error hidden"
-      ></div>
-
-
-      <div class="section-label">
-        Appeal Import Queue
-      </div>
-
-      <div
-        id="appealFileQueue"
-        class="file-queue"
-      >
-
-        <div class="empty-small">
-          No appeal files selected.
-        </div>
-
-      </div>
-
-
-      <div class="appeal-help">
-
-        <strong>
-          Appeal TXT Format
-        </strong>
-
-        <p>
-          Each text file links to the original claim using
-          claimNumber and contains the provider's corrected
-          billing information and supporting evidence.
-        </p>
-
-      </div>
-
-    </section>
-
-
-    <!-- ========================================
-         RIGHT — APPEALS
-    ========================================= -->
-
-    <section class="claims-panel">
-
-      <div class="panel-heading appeal-heading">
-
-        <div>
-
-          <h2>
-            Appeals
-          </h2>
-
-          <p>
-            Review whether new evidence resolves the original concern
-          </p>
-
-        </div>
-
-      </div>
-
-
-      <!-- ======================================
-           APPEAL FILTERS
-      ======================================= -->
-
-      <div class="appeal-view-tabs">
-
-        <button
-          id="appealAllButton"
-          class="appeal-view-button active"
-          type="button"
-          data-appeal-view="all"
-        >
-          ALL
-
-          <span id="appealAllCount">
-            0
-          </span>
-
-        </button>
-
-
-        <button
-          id="appealPendingButton"
-          class="appeal-view-button"
-          type="button"
-          data-appeal-view="pending"
-        >
-          PENDING
-
-          <span id="appealPendingCount">
-            0
-          </span>
-
-        </button>
-
-
-        <button
-          id="appealCompletedButton"
-          class="appeal-view-button"
-          type="button"
-          data-appeal-view="completed"
-        >
-          COMPLETED
-
-          <span id="appealCompletedCount">
-            0
-          </span>
-
-        </button>
-
-      </div>
-
-
-      <!-- ======================================
-           APPEAL WORKSPACE
-      ======================================= -->
-
-      <div class="claims-workspace appeals-workspace">
-
-        <!-- Appeal list -->
-
-        <aside class="claim-list-pane">
-
-          <div
-            id="appealsList"
-            class="claims-list"
-          >
-
-            <div class="empty-small">
-              No appeals yet.
+            <div id="progressWrap" class="progress-wrap hidden">
+              <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+              <div id="progressText" class="muted">0 / 0</div>
             </div>
-
+            <div id="importError" class="error hidden" role="alert"></div>
+            <p class="intake-note">Files are parsed here, then submitted to this workspace for analysis.</p>
           </div>
 
-        </aside>
-
-
-        <!-- Appeal detail -->
-
-        <section class="claim-detail-pane">
-
-          <div
-            id="emptyAppealResult"
-            class="empty-result"
-          >
-            Select an appeal.
+          <div id="appealsUploadPanel" class="hidden">
+            <div class="popover-heading"><strong>Import appeals</strong><span>One appeal per TXT</span></div>
+            <label class="upload-box compact-upload" for="appealTxtFiles">
+              <span class="upload-icon" aria-hidden="true">↑</span>
+              <strong>Choose appeal files</strong>
+              <span>Select one or more appeal letters</span>
+              <input id="appealTxtFiles" type="file" accept=".txt,text/plain" multiple />
+            </label>
+            <div id="appealBatchSummary" class="batch-summary hidden" aria-live="polite">
+              <div><span>Files</span><strong id="appealTotalFiles">0</strong></div>
+              <div><span>Reviewed</span><strong id="appealCompletedFiles">0</strong></div>
+              <div><span>Failed</span><strong id="appealFailedFiles">0</strong></div>
+            </div>
+            <div id="appealProgressWrap" class="progress-wrap hidden">
+              <div class="progress-track"><div id="appealProgressBar" class="progress-bar"></div></div>
+              <div id="appealProgressText" class="muted">0 / 0</div>
+            </div>
+            <div id="appealImportError" class="error hidden" role="alert"></div>
+            <p class="intake-note">Each file links to the original claim using <code>claimNumber</code> and may include corrected billing and evidence.</p>
           </div>
+        </div>
+      </div>
+    </header>
+    <button id="popoverBackdrop" class="popover-backdrop hidden" type="button" tabindex="-1" aria-label="Close open menu" aria-hidden="true"></button>
 
-          <div
-            id="appealResultContent"
-            class="hidden"
-          ></div>
-
+    <main id="claimsMode" class="app-shell">
+      <section id="claimsListView" class="list-view">
+        <div class="workspace-intro">
+          <div>
+            <span class="eyebrow">Operations console</span>
+            <h1>Claims</h1>
+            <p>Screen billing, inspect evidence, and keep the claim and provider record distinct.</p>
+          </div>
+          <span class="screening-note">Screening support, not an accusation</span>
+        </div>
+        <section class="provider-overview" aria-labelledby="providerOverviewTitle">
+          <div class="provider-overview-copy">
+            <span class="eyebrow">Provider analytics</span>
+            <h2 id="providerOverviewTitle">Portfolio review signal</h2>
+            <p id="providerAnalyticsSummary">Loading provider-level review activity…</p>
+          </div>
+          <dl class="provider-overview-metrics">
+            <div>
+              <dt>Providers</dt>
+              <dd id="providerAnalyticsProviderCount">—</dd>
+            </div>
+            <div>
+              <dt>Bills</dt>
+              <dd id="providerAnalyticsBillCount">—</dd>
+            </div>
+            <div>
+              <dt>Flagged</dt>
+              <dd id="providerAnalyticsFlaggedCount">—</dd>
+            </div>
+            <div>
+              <dt>Rate</dt>
+              <dd id="providerAnalyticsFlaggedRate">—</dd>
+            </div>
+          </dl>
+          <button id="providerAnalyticsOverviewButton" class="provider-overview-action" type="button">
+            View breakdown <span aria-hidden="true">→</span>
+          </button>
         </section>
+        <section class="record-list-card" aria-label="Analyzed claims">
+          <div id="claimsList" class="claims-list"><div class="empty-small">No analyzed claims yet.</div></div>
+        </section>
+      </section>
 
-      </div>
+      <section id="claimsDetailView" class="detail-view hidden" aria-live="polite">
+        <button id="backToClaims" class="back-button" type="button">‹ All claims</button>
+        <div id="emptyResult" class="hidden"></div>
+        <div id="resultContent" class="hidden"></div>
+      </section>
+    </main>
 
-    </section>
-
-  </main>
-
-
-  <!-- ==========================================
-       PROVIDER ANALYTICS
-  =========================================== -->
-
-  <div
-    id="providerAnalyticsModal"
-    class="modal-overlay hidden"
-  >
-
-    <div class="analytics-modal">
-
-      <div class="analytics-modal-header">
-
-        <div>
-
-          <span class="eyebrow">
-            Portfolio View
-          </span>
-
-          <h2>
-            Provider Analytics
-          </h2>
-
-          <p>
-            Review and high-risk rates across analyzed bills
-          </p>
-
+    <main id="appealsMode" class="app-shell hidden">
+      <section id="appealsListView" class="list-view">
+        <div class="workspace-intro">
+          <div>
+            <span class="eyebrow">Right of reply</span>
+            <h1>Appeals</h1>
+            <p>Review corrected billing and supporting evidence against the original concern.</p>
+          </div>
+          <span class="screening-note">Keep both review paths on the record</span>
         </div>
-
-
-        <button
-          id="closeProviderAnalytics"
-          class="modal-close"
-          type="button"
-          aria-label="Close provider analytics"
-        >
-          ×
-        </button>
-
-      </div>
-
-
-      <div
-        id="providerAnalyticsContent"
-        class="analytics-content"
-      >
-
-        <div class="empty-small">
-          Loading provider analytics...
+        <div class="appeal-view-tabs" aria-label="Appeal status filter">
+          <button id="appealAllButton" class="appeal-view-button active" type="button" data-appeal-view="all">All <span id="appealAllCount">0</span></button>
+          <button id="appealPendingButton" class="appeal-view-button" type="button" data-appeal-view="pending">Pending <span id="appealPendingCount">0</span></button>
+          <button id="appealCompletedButton" class="appeal-view-button" type="button" data-appeal-view="completed">Completed <span id="appealCompletedCount">0</span></button>
         </div>
+        <section class="record-list-card" aria-label="Appeals">
+          <div id="appealsList" class="claims-list"><div class="empty-small">No appeals yet.</div></div>
+        </section>
+      </section>
 
+      <section id="appealsDetailView" class="detail-view hidden" aria-live="polite">
+        <button id="backToAppeals" class="back-button" type="button">‹ All appeals</button>
+        <div id="emptyAppealResult" class="hidden"></div>
+        <div id="appealResultContent" class="hidden"></div>
+      </section>
+    </main>
+
+    <div id="providerAnalyticsModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="providerAnalyticsTitle">
+      <div class="analytics-modal">
+        <div class="analytics-modal-header">
+          <div>
+            <span class="eyebrow">Portfolio view</span>
+            <h2 id="providerAnalyticsTitle">Provider analytics</h2>
+            <p>Review and high-risk rates across analyzed bills.</p>
+          </div>
+          <button id="closeProviderAnalytics" class="modal-close" type="button" aria-label="Close provider analytics">×</button>
+        </div>
+        <div id="providerAnalyticsContent" class="analytics-content"><div class="empty-small">Loading provider analytics...</div></div>
       </div>
-
     </div>
 
-  </div>
-
-
-  <script src="/script.js"></script>
-
-</body>
-
+    <script src="/script.js"></script>
+  </body>
 </html>

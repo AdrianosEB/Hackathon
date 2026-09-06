@@ -37,8 +37,9 @@ Two front ends over the same API:
 
 | | |
 |---|---|
-| `/` | the working dashboard — submit, review, appeal, provider calls |
-| `/story` | a scroll narrative through the same pipeline, eight scenes |
+| `/` | the story / landing page — a scroll narrative through the pipeline |
+| `/dashboard` | the working dashboard — submit, review, appeal, provider calls |
+| `/story` | an alias for the story / landing page |
 
 For the provider axis against local fixtures rather than the live
 federal registry:

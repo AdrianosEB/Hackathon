@@ -1,32 +1,15 @@
-import OpenAI from "openai";
+import {
+  createStructuredAnthropicReview,
+  isAnthropicConfigured
+} from "./anthropic.js";
 
 
 // =============================================
-// OpenAI configuration
+// Anthropic configuration
 // =============================================
 
-const apiKey =
-  process.env.OPENAI_API_KEY;
-
-
-const model =
-  process.env.OPENAI_MODEL ||
-  "gpt-5.6-sol";
-
-
-// =============================================
-// Create client only when key exists
-//
-// This allows deterministic rules to continue
-// working even if OpenAI is unavailable.
-// =============================================
-
-const client =
-  apiKey
-    ? new OpenAI({
-        apiKey
-      })
-    : null;
+// The deterministic reviewer remains available
+// whenever Anthropic is not configured.
 
 
 // =============================================
@@ -453,15 +436,18 @@ const AI_REVIEW_SCHEMA = {
 // =============================================
 
 export async function reviewClaimWithAI(
-  claim
+  claim,
+  {
+    signal
+  } = {}
 ) {
 
   // =============================================
-  // OpenAI unavailable
+  // Anthropic unavailable
   // =============================================
 
   if (
-    !client
+    !isAnthropicConfigured()
   ) {
 
     return {
@@ -612,94 +598,24 @@ Return a JSON evidence review using only the supplied claim information.
   try {
 
     // =============================================
-    // OpenAI Responses API
-    // =============================================
-
-    const response =
-      await client.responses.create({
-
-        model,
-
-        store:
-          false,
-
-        instructions,
-
-        input: [
-          {
-
-            role:
-              "user",
-
-            content: [
-              {
-
-                type:
-                  "input_text",
-
-                text:
-                  input
-
-              }
-            ]
-
-          }
-        ],
-
-
-        // =========================================
-        // Structured Outputs
-        // =========================================
-
-        text: {
-
-          format: {
-
-            type:
-              "json_schema",
-
-            name:
-              "claim_evidence_review",
-
-            strict:
-              true,
-
-            schema:
-              AI_REVIEW_SCHEMA
-
-          }
-
-        }
-
-      });
-
-
-    // =============================================
-    // Responses API convenience output
-    // =============================================
-
-    const outputText =
-      response.output_text;
-
-
-    if (
-      !outputText
-    ) {
-
-      throw new Error(
-        "OpenAI returned no structured review text."
-      );
-    }
-
-
-    // =============================================
-    // Parse structured response
+    // Anthropic Messages API
     // =============================================
 
     const parsed =
-      JSON.parse(
-        outputText
-      );
+      await createStructuredAnthropicReview({
+        system:
+          instructions,
+
+        input,
+
+        schema:
+          AI_REVIEW_SCHEMA,
+
+        toolName:
+          "submit_claim_evidence_review",
+
+        signal
+      });
 
 
     // =============================================

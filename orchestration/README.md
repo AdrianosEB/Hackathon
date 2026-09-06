@@ -91,7 +91,7 @@ the names `db.js` and the frontend already use.
 The deterministic layer is the floor. AI can only ever move a decision toward
 *more* human attention, never less:
 
-- **No API key** → `available: false`, rules-only decision.
+- **No Anthropic API key** → `available: false`, rules-only decision.
 - **Request throws** → caught, rules-only decision.
 - **Request exceeds `AI_TIMEOUT_MS`** (default 30000) → rules-only decision.
 
@@ -128,7 +128,7 @@ npm run example:merge  # the claim-stage merge in isolation
 ```
 
 None of them touch the database, start a server, or place a call. Without an
-`OPENAI_API_KEY` each run is fully deterministic and every expectation is
+`ANTHROPIC_API_KEY` each run is fully deterministic and every expectation is
 checked; with a key they run hybrid, still check the deterministic layer, and
 report the merged result without asserting it.
 

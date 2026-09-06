@@ -81,8 +81,11 @@ const app =
   express();
 
 
+// Prefer an explicitly requested port, then Conductor's per-workspace port.
+// Falling back to 3000 keeps `npm start` convenient outside Conductor.
 const PORT =
   process.env.PORT ||
+  process.env.CONDUCTOR_PORT ||
   3000;
 
 
@@ -95,6 +98,40 @@ app.use(
     limit:
       "2mb"
   })
+);
+
+
+// Lead with the narrative. The operational dashboard remains available
+// at /dashboard for reviewing submitted claims.
+app.get(
+  "/",
+  (
+    req,
+    res
+  ) => {
+
+    res.sendFile(
+      "story.html",
+      { root: "website" }
+    );
+
+  }
+);
+
+
+app.get(
+  "/dashboard",
+  (
+    req,
+    res
+  ) => {
+
+    res.sendFile(
+      "index.html",
+      { root: "website" }
+    );
+
+  }
 );
 
 
@@ -1864,15 +1901,15 @@ app.get(
       ok:
         true,
 
-      aiKeyLoaded:
+      anthropicKeyLoaded:
         Boolean(
           process.env
-            .OPENAI_API_KEY
+            .ANTHROPIC_API_KEY
         ),
 
-      aiModel:
+      anthropicModel:
         process.env
-          .OPENAI_MODEL ||
+          .ANTHROPIC_MODEL ||
         null,
 
       autoCall:
@@ -1893,25 +1930,25 @@ app.get(
 // Start
 // =============================================
 
-app.listen(
-  PORT,
-  () => {
+function logStartup(
+  port
+) {
 
     console.log(
-      `Claim Integrity running at http://localhost:${PORT}`
+      `Claim Integrity running at http://localhost:${port}`
     );
 
 
     console.log(
-      `AI key loaded: ${Boolean(
-        process.env.OPENAI_API_KEY
+      `Anthropic key loaded: ${Boolean(
+        process.env.ANTHROPIC_API_KEY
       )}`
     );
 
 
     console.log(
-      `AI model: ${
-        process.env.OPENAI_MODEL ||
+      `Anthropic model: ${
+        process.env.ANTHROPIC_MODEL ||
         "default"
       }`
     );
@@ -1977,5 +2014,67 @@ app.listen(
       "Appeal review: enabled"
     );
 
-  }
-);
+}
+
+
+function startServer(
+  port
+) {
+
+  const server =
+    app.listen(port);
+
+
+  server.once(
+    "listening",
+    () => {
+
+      const address =
+        server.address();
+
+      const boundPort =
+        typeof address === "object" &&
+        address !== null
+
+          ? address.port
+
+          : port;
+
+      logStartup(boundPort);
+
+    }
+  );
+
+
+  server.once(
+    "error",
+    (error) => {
+
+      // A prior local server (or another Conductor workspace) can already
+      // own the preferred port. Let the OS select a free port rather than
+      // terminating the process with EADDRINUSE.
+      if (
+        error.code === "EADDRINUSE" &&
+        String(port) !== "0"
+      ) {
+
+        console.warn(
+          `Port ${port} is in use; starting on an available port instead.`
+        );
+
+        startServer(0);
+
+        return;
+
+      }
+
+
+      throw error;
+
+    }
+  );
+
+}
+
+
+startServer(PORT);

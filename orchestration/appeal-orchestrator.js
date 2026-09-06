@@ -248,10 +248,11 @@ export async function orchestrateAppeal(
       // --------------------------------------------
 
       runAi:
-        () =>
+        (signal) =>
           reviewAppealWithAI(
             originalClaim,
-            appeal
+            appeal,
+            { signal }
           ),
 
 

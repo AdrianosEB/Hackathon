@@ -340,6 +340,297 @@ function workflowBadge(
 
 
 // =============================================
+// LIST / DETAIL NAVIGATION
+// =============================================
+
+function closeHeaderPopovers() {
+
+  $("activityQueuePopover")
+    .classList
+    .add(
+      "hidden"
+    );
+
+
+  $("uploadPopover")
+    .classList
+    .add(
+      "hidden"
+    );
+
+
+  $("queueButton")
+    .setAttribute(
+      "aria-expanded",
+      "false"
+    );
+
+
+  $("uploadButton")
+    .setAttribute(
+      "aria-expanded",
+      "false"
+    );
+
+
+  $("popoverBackdrop")
+    .classList
+    .add(
+      "hidden"
+    );
+
+
+  $("popoverBackdrop")
+    .setAttribute(
+      "aria-hidden",
+      "true"
+    );
+
+}
+
+
+function toggleHeaderPopover(
+  popoverId,
+  triggerId
+) {
+
+  const popover =
+    $(popoverId);
+
+
+  const shouldOpen =
+    popover.classList.contains(
+      "hidden"
+    );
+
+
+  closeHeaderPopovers();
+
+
+  if (
+    !shouldOpen
+  ) {
+
+    return;
+
+  }
+
+
+  popover
+    .classList
+    .remove(
+      "hidden"
+    );
+
+
+  $(triggerId)
+    .setAttribute(
+      "aria-expanded",
+      "true"
+    );
+
+
+  $("popoverBackdrop")
+    .classList
+    .remove(
+      "hidden"
+    );
+
+
+  $("popoverBackdrop")
+    .setAttribute(
+      "aria-hidden",
+      "false"
+    );
+
+}
+
+
+function showClaimsList() {
+
+  $("claimsListView")
+    .classList
+    .remove(
+      "hidden"
+    );
+
+
+  $("claimsDetailView")
+    .classList
+    .add(
+      "hidden"
+    );
+
+
+}
+
+
+function showAppealsList() {
+
+  $("appealsListView")
+    .classList
+    .remove(
+      "hidden"
+    );
+
+
+  $("appealsDetailView")
+    .classList
+    .add(
+      "hidden"
+    );
+
+
+}
+
+
+function showClaimDetail() {
+
+  $("claimsListView")
+    .classList
+    .add(
+      "hidden"
+    );
+
+
+  $("claimsDetailView")
+    .classList
+    .remove(
+      "hidden"
+    );
+
+
+  closeHeaderPopovers();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+
+}
+
+
+function showAppealDetail() {
+
+  $("appealsListView")
+    .classList
+    .add(
+      "hidden"
+    );
+
+
+  $("appealsDetailView")
+    .classList
+    .remove(
+      "hidden"
+    );
+
+
+  closeHeaderPopovers();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+
+}
+
+
+function updateQueueCount() {
+
+  const imports =
+    currentMode ===
+    "claims"
+
+      ? batchEntries.length
+      : appealBatchEntries.length;
+
+
+  const calls =
+    currentMode ===
+    "claims"
+
+      ? Number(
+          $("callQueueCount")
+            .textContent ||
+          0
+        )
+      : 0;
+
+
+  const total =
+    imports +
+    calls;
+
+
+  $("queueCount")
+    .textContent =
+    String(
+      total
+    );
+
+
+  $("queueSummary")
+    .textContent =
+    total ===
+    0
+
+      ? "Nothing queued"
+      : `${total} item${
+          total ===
+          1
+            ? ""
+            : "s"
+        }`;
+
+
+}
+
+
+function syncHeaderForMode() {
+
+  const claimsMode =
+    currentMode ===
+    "claims";
+
+
+  $("uploadButton")
+    .textContent =
+    claimsMode
+      ? "Upload claims"
+      : "Upload appeals";
+
+
+  $("claimsUploadPanel")
+    .classList
+    .toggle(
+      "hidden",
+      !claimsMode
+    );
+
+
+  $("appealsUploadPanel")
+    .classList
+    .toggle(
+      "hidden",
+      claimsMode
+    );
+
+
+  $("claimsQueueContent")
+    .classList
+    .toggle(
+      "hidden",
+      !claimsMode
+    );
+
+
+  $("appealsQueueContent")
+    .classList
+    .toggle(
+      "hidden",
+      claimsMode
+    );
+
+
+  updateQueueCount();
+
+}
+
+
+// =============================================
 // MODE SWITCH
 // =============================================
 
@@ -388,9 +679,15 @@ function setMode(
     );
 
 
+  closeHeaderPopovers();
+  syncHeaderForMode();
+
+
   if (
     claimsMode
   ) {
+
+    showClaimsList();
 
     refreshClaims(
       false
@@ -400,8 +697,10 @@ function setMode(
 
   } else {
 
+    showAppealsList();
+
     refreshAppeals(
-      true
+      false
     );
 
   }
@@ -434,6 +733,76 @@ $("appealsModeButton")
       setMode(
         "appeals"
       );
+
+    }
+  );
+
+
+$("backToClaims")
+  .addEventListener(
+    "click",
+    showClaimsList
+  );
+
+
+$("backToAppeals")
+  .addEventListener(
+    "click",
+    showAppealsList
+  );
+
+
+$("queueButton")
+  .addEventListener(
+    "click",
+    () => {
+
+      toggleHeaderPopover(
+        "activityQueuePopover",
+        "queueButton"
+      );
+
+    }
+  );
+
+
+$("uploadButton")
+  .addEventListener(
+    "click",
+    () => {
+
+      toggleHeaderPopover(
+        "uploadPopover",
+        "uploadButton"
+      );
+
+    }
+  );
+
+
+$("popoverBackdrop")
+  .addEventListener(
+    "click",
+    closeHeaderPopovers
+  );
+
+
+document
+  .addEventListener(
+    "click",
+    (
+      event
+    ) => {
+
+      if (
+        !event.target.closest(
+          "#queueButton, #uploadButton, #activityQueuePopover, #uploadPopover, [data-open-upload]"
+        )
+      ) {
+
+        closeHeaderPopovers();
+
+      }
 
     }
   );
@@ -1185,6 +1554,9 @@ function renderClaimQueue() {
     `;
 
 
+    updateQueueCount();
+
+
     return;
 
   }
@@ -1323,6 +1695,9 @@ function renderClaimQueue() {
         ""
       );
 
+
+  updateQueueCount();
+
 }
 
 
@@ -1450,6 +1825,7 @@ async function refreshClaims(
 
 
     renderClaimsList();
+    refreshProviderAnalyticsOverview();
 
 
     if (
@@ -1499,10 +1875,29 @@ function renderClaimsList() {
   ) {
 
     container.innerHTML = `
-      <div class="empty-small">
-        No analyzed claims yet.
+      <div class="empty-list-state">
+        <strong>Nothing screened yet</strong>
+        <span>Upload a CSV claim to begin the review queue.</span>
+        <button type="button" data-open-upload>
+          Upload claims
+        </button>
       </div>
     `;
+
+
+    container
+      .querySelector(
+        "[data-open-upload]"
+      )
+      ?.addEventListener(
+        "click",
+        () => {
+
+          $("uploadButton")
+            .click();
+
+        }
+      );
 
 
     return;
@@ -1534,55 +1929,23 @@ function renderClaimsList() {
               }"
               data-claim-id="${claim.id}"
             >
-
-              <div class="claim-list-top">
-
-                <strong>
-                  ${escapeHtml(
-                    claim.claimNumber
-                  )}
-                </strong>
-
-                ${riskBadge(
-                  claim.riskLevel
-                )}
-
-              </div>
-
-
-              <span>
-                ${escapeHtml(
-                  claim.providerName
-                )}
+              <span class="record-dot record-dot-${escapeHtml(claim.riskLevel || "low")}" aria-hidden="true"></span>
+              <strong class="record-id">
+                ${escapeHtml(claim.claimNumber)}
+              </strong>
+              <span class="record-provider">
+                ${escapeHtml(claim.providerName)}
               </span>
-
-
-              <div class="claim-list-ratings">
-
-                <small>
-                  Rules:
-                  ${escapeHtml(
-                    String(
-                      claim.rulesRiskLevel ||
-                      "low"
-                    )
-                      .toUpperCase()
-                  )}
-                </small>
-
-                <small>
-                  AI:
-                  ${escapeHtml(
-                    String(
-                      claim.aiRiskLevel ||
-                      "unavailable"
-                    )
-                      .toUpperCase()
-                  )}
-                </small>
-
-              </div>
-
+              <span class="record-ratings">
+                Rules ${escapeHtml(String(claim.rulesRiskLevel || "low").toUpperCase())}
+                <i>·</i>
+                AI ${escapeHtml(String(claim.aiRiskLevel || "unavailable").toUpperCase())}
+              </span>
+              <span class="record-amount">
+                ${money(claim.totalBilled)}
+              </span>
+              ${riskBadge(claim.riskLevel)}
+              <span class="record-chevron" aria-hidden="true">›</span>
             </button>
           `;
 
@@ -1670,6 +2033,9 @@ async function loadClaim(
     renderClaimDetail(
       claim
     );
+
+
+    showClaimDetail();
 
   } catch (
     error
@@ -2224,6 +2590,257 @@ function renderClaimDetail(
 // CLARIFICATION CALL
 // =============================================
 
+function getTranscriptTurns(
+  call
+) {
+
+  const messages =
+    Array.isArray(
+      call.messages
+    )
+
+      ? call.messages
+      : [];
+
+
+  const structuredTurns =
+    messages
+      .filter(
+        (message) => {
+
+          const role =
+            String(
+              message?.role ||
+              ""
+            )
+              .trim()
+              .toLowerCase();
+
+
+          return role !== "system";
+
+        }
+      )
+      .map(
+        (message) => {
+
+          const role =
+            String(
+              message?.role ||
+              ""
+            )
+              .trim()
+              .toLowerCase();
+
+
+          const text =
+            String(
+              message?.message ||
+              message?.content ||
+              message?.text ||
+              ""
+            )
+              .trim();
+
+
+          if (
+            !text
+          ) {
+
+            return null;
+
+          }
+
+
+          const providerTurn =
+            role === "user" ||
+            role === "customer" ||
+            role === "provider";
+
+
+          return {
+            speaker:
+              providerTurn
+                ? "Provider"
+                : "Assistant",
+
+            tone:
+              providerTurn
+                ? "provider"
+                : "assistant",
+
+            text,
+
+            seconds:
+              Number.isFinite(
+                Number(
+                  message?.secondsFromStart
+                )
+              )
+
+                ? Number(
+                    message.secondsFromStart
+                  )
+
+                : null
+          };
+
+        }
+      )
+      .filter(Boolean);
+
+
+  if (
+    structuredTurns.length >
+    0
+  ) {
+
+    return structuredTurns;
+
+  }
+
+
+  const transcript =
+    String(
+      call.transcript ||
+      ""
+    ).trim();
+
+
+  if (
+    !transcript
+  ) {
+
+    return [];
+
+  }
+
+
+  const turns = [];
+  let currentTurn = null;
+
+
+  transcript
+    .split("\n")
+    .forEach(
+      (line) => {
+
+        const match =
+          line.match(
+            /^(AI|Assistant|User|Customer|Provider)\s*:\s*(.*)$/i
+          );
+
+
+        if (
+          match
+        ) {
+
+          const providerTurn =
+            /^(User|Customer|Provider)$/i.test(
+              match[1]
+            );
+
+
+          currentTurn = {
+            speaker:
+              providerTurn
+                ? "Provider"
+                : "Assistant",
+
+            tone:
+              providerTurn
+                ? "provider"
+                : "assistant",
+
+            text:
+              match[2].trim(),
+
+            seconds:
+              null
+          };
+
+
+          turns.push(
+            currentTurn
+          );
+
+
+          return;
+
+        }
+
+
+        if (
+          currentTurn
+        ) {
+
+          currentTurn.text +=
+            `${
+              currentTurn.text
+                ? "\n"
+                : ""
+            }${line}`;
+
+        }
+
+      }
+    );
+
+
+  return turns.length >
+    0
+
+      ? turns
+
+      : [
+          {
+            speaker: "Call transcript",
+            tone: "assistant",
+            text: transcript,
+            seconds: null
+          }
+        ];
+
+}
+
+
+function formatTranscriptTime(
+  seconds
+) {
+
+  if (
+    !Number.isFinite(
+      seconds
+    )
+  ) {
+
+    return "";
+
+  }
+
+
+  const wholeSeconds =
+    Math.max(
+      0,
+      Math.round(
+        seconds
+      )
+    );
+
+
+  return `${
+    Math.floor(
+      wholeSeconds /
+      60
+    )
+  }:${String(
+    wholeSeconds %
+    60
+  ).padStart(2, "0")}`;
+
+}
+
+
 async function loadClarificationCall(
   claimNumber
 ) {
@@ -2257,6 +2874,29 @@ async function loadClarificationCall(
         return;
 
       }
+
+
+      const previousTranscript =
+        container.querySelector(
+          ".transcript-list"
+        );
+
+
+      const previousTranscriptScroll =
+        previousTranscript
+
+          ? {
+              top:
+                previousTranscript.scrollTop,
+
+              atBottom:
+                previousTranscript.scrollTop +
+                  previousTranscript.clientHeight >=
+                previousTranscript.scrollHeight -
+                  24
+            }
+
+          : null;
 
 
       try {
@@ -2329,64 +2969,97 @@ async function loadClarificationCall(
           "";
 
 
+        const transcriptTurns =
+          getTranscriptTurns(
+            call
+          );
+
+
+        const transcriptHtml =
+          transcriptTurns
+            .map(
+              (turn) => {
+
+                const timestamp =
+                  formatTranscriptTime(
+                    turn.seconds
+                  );
+
+
+                return `
+                  <article class="transcript-turn transcript-turn-${turn.tone}">
+                    <div class="transcript-turn-meta">
+                      <strong>${escapeHtml(turn.speaker)}</strong>
+                      ${
+                        timestamp
+
+                          ? `<time>${escapeHtml(timestamp)}</time>`
+
+                          : ""
+                      }
+                    </div>
+                    <p>${escapeHtml(turn.text)}</p>
+                  </article>
+                `;
+
+              }
+            )
+            .join(
+              ""
+            );
+
+
         container.innerHTML = `
 
           <div class="call-summary">
-
-            <div>
-
-              <span>
-                Status
-              </span>
-
-              <strong>
-                ${escapeHtml(
-                  status
-                )}
+            <div class="call-status-block">
+              <span>Call status</span>
+              <strong class="call-status-value">
+                ${escapeHtml(status)}
               </strong>
-
             </div>
+            <div class="call-summary-meta">
+              ${
+                call.endedReason
 
+                  ? `<span>Ended: ${escapeHtml(call.endedReason)}</span>`
 
-            ${
-              call.endedReason
+                  : ""
+              }
+              ${
+                transcriptTurns.length >
+                0
 
-                ? `
-                  <div>
+                  ? `<span>${transcriptTurns.length} turn${transcriptTurns.length === 1 ? "" : "s"}</span>`
 
-                    <span>
-                      Ended Reason
-                    </span>
-
-                    <strong>
-                      ${escapeHtml(
-                        call.endedReason
-                      )}
-                    </strong>
-
-                  </div>
-                `
-
-                : ""
-            }
-
+                  : ""
+              }
+            </div>
           </div>
 
 
           ${
-            transcript
+            transcriptTurns.length >
+            0
 
               ? `
                 <div class="transcript-box">
-
-                  <strong>
-                    Transcript
-                  </strong>
-
-                  <pre>${escapeHtml(
-                    transcript
-                  )}</pre>
-
+                  <div class="transcript-heading">
+                    <div>
+                      <span>Conversation</span>
+                      <strong>Clarification transcript</strong>
+                    </div>
+                    <span class="transcript-live-state">
+                      ${
+                        status === "ended"
+                          ? "Complete"
+                          : "Live"
+                      }
+                    </span>
+                  </div>
+                  <div class="transcript-list">
+                    ${transcriptHtml}
+                  </div>
                 </div>
               `
 
@@ -2406,6 +3079,25 @@ async function loadClarificationCall(
               `
           }
         `;
+
+
+        const transcriptList =
+          container.querySelector(
+            ".transcript-list"
+          );
+
+
+        if (
+          previousTranscriptScroll &&
+          transcriptList
+        ) {
+
+          transcriptList.scrollTop =
+            previousTranscriptScroll.atBottom
+              ? transcriptList.scrollHeight
+              : previousTranscriptScroll.top;
+
+        }
 
 
         if (
@@ -2558,6 +3250,9 @@ function renderCallQueue(
     String(
       total
     );
+
+
+  updateQueueCount();
 
 
   if (
@@ -3521,6 +4216,9 @@ function renderAppealQueue() {
     `;
 
 
+    updateQueueCount();
+
+
     return;
 
   }
@@ -3661,6 +4359,9 @@ function renderAppealQueue() {
         ""
       );
 
+
+  updateQueueCount();
+
 }
 
 
@@ -3774,22 +4475,11 @@ document
             updateAppealTabSelection();
 
 
-            $("appealResultContent")
-              .classList
-              .add(
-                "hidden"
-              );
-
-
-            $("emptyAppealResult")
-              .classList
-              .remove(
-                "hidden"
-              );
+            showAppealsList();
 
 
             await refreshAppeals(
-              true
+              false
             );
 
           }
@@ -3951,10 +4641,29 @@ function renderAppealsList() {
   ) {
 
     container.innerHTML = `
-      <div class="empty-small">
-        No appeals in this view.
+      <div class="empty-list-state">
+        <strong>No appeals in this view</strong>
+        <span>Upload an appeal letter to add it to the review queue.</span>
+        <button type="button" data-open-upload>
+          Upload appeals
+        </button>
       </div>
     `;
+
+
+    container
+      .querySelector(
+        "[data-open-upload]"
+      )
+      ?.addEventListener(
+        "click",
+        () => {
+
+          $("uploadButton")
+            .click();
+
+        }
+      );
 
 
     return;
@@ -3986,42 +4695,19 @@ function renderAppealsList() {
               }"
               data-appeal-id="${appeal.id}"
             >
-
-              <div class="claim-list-top">
-
-                <strong>
-                  ${escapeHtml(
-                    appeal.claimNumber
-                  )}
-                </strong>
-
-                ${workflowBadge(
-                  appeal.workflowStatus
-                )}
-
-              </div>
-
-
-              <span>
-                ${escapeHtml(
-                  appeal.providerName ||
-                  "Provider not supplied"
-                )}
+              <span class="record-dot record-dot-${escapeHtml(appeal.workflowStatus || "pending")}" aria-hidden="true"></span>
+              <strong class="record-id">
+                ${escapeHtml(appeal.claimNumber)}
+              </strong>
+              <span class="record-provider">
+                ${escapeHtml(appeal.providerName || "Provider not supplied")}
               </span>
-
-
-              <div class="claim-list-ratings">
-
-                <small>
-                  ${escapeHtml(
-                    outcomeLabel(
-                      appeal.finalOutcome
-                    )
-                  )}
-                </small>
-
-              </div>
-
+              <span class="record-ratings">
+                ${escapeHtml(outcomeLabel(appeal.finalOutcome))}
+              </span>
+              ${workflowBadge(appeal.workflowStatus)}
+              ${outcomeBadge(appeal.finalOutcome)}
+              <span class="record-chevron" aria-hidden="true">›</span>
             </button>
           `;
 
@@ -4105,6 +4791,9 @@ async function loadAppeal(
     renderAppealDetail(
       appeal
     );
+
+
+    showAppealDetail();
 
   } catch (
     error
@@ -4773,6 +5462,188 @@ function renderAppealDetail(
 // ==================================================
 
 
+function setProviderAnalyticsOverview(
+  {
+    providers = "—",
+    bills = "—",
+    flagged = "—",
+    rate = "—",
+    summary = "Loading provider-level review activity…"
+  } = {}
+) {
+
+  const summaryElement =
+    $("providerAnalyticsSummary");
+
+
+  if (
+    !summaryElement
+  ) {
+
+    return;
+
+  }
+
+
+  summaryElement.textContent =
+    summary;
+
+
+  $("providerAnalyticsProviderCount")
+    .textContent =
+    String(
+      providers
+    );
+
+
+  $("providerAnalyticsBillCount")
+    .textContent =
+    String(
+      bills
+    );
+
+
+  $("providerAnalyticsFlaggedCount")
+    .textContent =
+    String(
+      flagged
+    );
+
+
+  $("providerAnalyticsFlaggedRate")
+    .textContent =
+    rate;
+
+}
+
+
+async function refreshProviderAnalyticsOverview() {
+
+  try {
+
+    const response =
+      await fetch(
+        "/api/providers/stats"
+      );
+
+
+    if (
+      !response.ok
+    ) {
+
+      throw new Error(
+        "Could not load provider analytics."
+      );
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    const providers =
+      Array.isArray(
+        data.providers
+      )
+
+        ? data.providers
+        : [];
+
+
+    const totals =
+      providers.reduce(
+        (
+          result,
+          provider
+        ) => ({
+          bills:
+            result.bills +
+            Number(
+              provider.totalClaims ||
+              0
+            ),
+          flagged:
+            result.flagged +
+            Number(
+              provider.flaggedClaims ||
+              0
+            )
+        }),
+        {
+          bills: 0,
+          flagged: 0
+        }
+      );
+
+
+    const flaggedRate =
+      totals.bills >
+      0
+
+        ? (
+            totals.flagged /
+            totals.bills
+          ) * 100
+
+        : 0;
+
+
+    const highestSignal =
+      [...providers]
+        .sort(
+          (
+            first,
+            second
+          ) =>
+            Number(
+              second.flaggedPercent ||
+              0
+            ) -
+            Number(
+              first.flaggedPercent ||
+              0
+            )
+        )[0];
+
+
+    setProviderAnalyticsOverview({
+      providers: providers.length,
+      bills: totals.bills,
+      flagged: totals.flagged,
+      rate: percent(
+        flaggedRate
+      ),
+      summary:
+        providers.length ===
+        0
+
+          ? "Provider-level patterns will appear as claims are analyzed."
+
+          : highestSignal
+
+            ? `${highestSignal.providerName} has the highest flagged rate at ${percent(highestSignal.flaggedPercent)}.`
+
+            : "Review activity is available across the analyzed provider portfolio."
+    });
+
+  } catch (
+    error
+  ) {
+
+    setProviderAnalyticsOverview({
+      providers: "—",
+      bills: "—",
+      flagged: "—",
+      rate: "—",
+      summary: "Provider analytics are temporarily unavailable."
+    });
+
+  }
+
+}
+
+
 // =============================================
 // LOAD PROVIDER ANALYTICS
 // =============================================
@@ -5243,10 +6114,36 @@ function closeProviderAnalytics() {
 // PROVIDER ANALYTICS BUTTONS
 // =============================================
 
-$("providerAnalyticsButton")
-  .addEventListener(
-    "click",
-    loadProviderAnalytics
+["providerAnalyticsButton", "providerAnalyticsTopButton", "providerAnalyticsOverviewButton"]
+  .forEach(
+    (buttonId) => {
+
+      $(buttonId)
+        ?.addEventListener(
+          "click",
+          () => {
+
+            closeHeaderPopovers();
+            loadProviderAnalytics();
+
+          }
+        );
+
+    }
+  );
+
+
+["csvFiles", "appealTxtFiles"]
+  .forEach(
+    (inputId) => {
+
+      $(inputId)
+        .addEventListener(
+          "change",
+          closeHeaderPopovers
+        );
+
+    }
   );
 
 
@@ -5290,6 +6187,7 @@ document
       ) {
 
         closeProviderAnalytics();
+        closeHeaderPopovers();
 
       }
 
@@ -5302,9 +6200,13 @@ document
 // =============================================
 
 updateAppealTabSelection();
+syncHeaderForMode();
+showClaimsList();
 
 
-refreshClaims();
+refreshClaims(
+  false
+);
 
 
 refreshCallQueue();

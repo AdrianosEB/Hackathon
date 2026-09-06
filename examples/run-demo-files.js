@@ -20,7 +20,7 @@
 // longer does what its name says, this fails.
 //
 // No database, no server, no phone call. Without an
-// OPENAI_API_KEY every expectation is checked; with a
+// ANTHROPIC_API_KEY every expectation is checked; with a
 // key the deterministic layer is still checked and
 // the merged result is reported.
 // ==================================================
@@ -79,7 +79,7 @@ const DRY_RUN_QUEUE =
 
 const AI_ENABLED =
   Boolean(
-    process.env.OPENAI_API_KEY
+    process.env.ANTHROPIC_API_KEY
   );
 
 
@@ -223,7 +223,7 @@ console.log(
   `DEMO FILES - ${
     AI_ENABLED
       ? "HYBRID (rules + AI)"
-      : "RULES ONLY (no OPENAI_API_KEY)"
+      : "RULES ONLY (no ANTHROPIC_API_KEY)"
   }`
 );
 

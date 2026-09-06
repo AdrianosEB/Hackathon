@@ -16,7 +16,7 @@
 // it would have dialled. examples/call-demo.js plays
 // the call lifecycle out in full.
 //
-// WITHOUT an OPENAI_API_KEY the AI reviewers report
+// WITHOUT an ANTHROPIC_API_KEY the AI reviewers report
 // themselves unavailable and the run is fully
 // deterministic, so every expectation is checked.
 //
@@ -63,7 +63,7 @@ const QUIET = {
 
 const AI_ENABLED =
   Boolean(
-    process.env.OPENAI_API_KEY
+    process.env.ANTHROPIC_API_KEY
   );
 
 
@@ -173,7 +173,7 @@ console.log(
   `CLAIM INTEGRITY ORCHESTRATION - ${
     AI_ENABLED
       ? "HYBRID (rules + AI)"
-      : "RULES ONLY (no OPENAI_API_KEY)"
+      : "RULES ONLY (no ANTHROPIC_API_KEY)"
   }`
 );
 

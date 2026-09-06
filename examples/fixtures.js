@@ -8,7 +8,7 @@
 // Every scenario names the deterministic outcome it
 // is built to produce, so examples/run-orchestration.js
 // can check the pipeline end to end without needing
-// an OpenAI key.
+// an Anthropic key.
 //
 // All data here is invented for a hackathon demo. No
 // real patient, provider, or reimbursement rate is
