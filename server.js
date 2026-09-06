@@ -105,6 +105,35 @@ app.get("/", (req, res) => {
 
 
 // -------------------------
+// STUDIO
+//
+// A second, scene-based front end over the same API. It
+// shares scenarios.js with the original page and adds no
+// endpoints of its own — everything it shows comes from
+// /api/claims/analyze, /api/dashboard and
+// /api/verification/coverage.
+// -------------------------
+
+app.get("/studio", (req, res) => {
+  res.sendFile("studio.html", { root: "." });
+});
+
+
+// -------------------------
+// STORY
+//
+// A scroll narrative over the same API, with a claim file as the
+// way in rather than a form. Shares scenarios.js with the others
+// and adds no endpoints: the dropped file is read in the browser
+// and posted to /api/claims/analyze like any other claim.
+// -------------------------
+
+app.get("/story", (req, res) => {
+  res.sendFile("story.html", { root: "." });
+});
+
+
+// -------------------------
 // Health check
 // -------------------------
 

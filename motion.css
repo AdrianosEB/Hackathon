@@ -1,0 +1,577 @@
+/* =============================================================
+   MOTION LAYER
+   =============================================================
+
+   Loaded after style.css. Adds no colour and no layout of its
+   own — it borrows the tokens already defined in :root and only
+   describes how things move.
+
+   Two rules govern everything here:
+
+   1. Motion never claims knowledge the app does not have.
+      While /api/claims/analyze is in flight we know nothing
+      about progress, so the film shows an indeterminate sweep,
+      not a percentage. The stage-by-stage resolve happens only
+      once real evidence has come back.
+
+   2. Everything degrades. The whole file is neutralised under
+      prefers-reduced-motion at the bottom, and every animated
+      element is readable in its final state without JS.
+============================================================= */
+
+
+:root {
+
+  /* The "expensive" easing curve — a long decelerating tail.
+     This one does most of the work of making things feel
+     smooth rather than merely animated. */
+  --ease-out:    cubic-bezier(.16, 1, .3, 1);
+
+  /* Slight overshoot. Used sparingly: nodes landing, chips. */
+  --ease-spring: cubic-bezier(.34, 1.4, .64, 1);
+
+  --ease-both:   cubic-bezier(.65, 0, .35, 1);
+
+  --dur-1: 160ms;
+  --dur-2: 300ms;
+  --dur-3: 560ms;
+  --dur-4: 900ms;
+}
+
+
+/* =============================================
+   AMBIENT BACKGROUND
+
+   A very slow drifting wash behind the page. It is the
+   single biggest contributor to the "this is moving even
+   when nothing is happening" feel, and it costs one
+   composited layer.
+============================================= */
+
+body::before {
+
+  content: "";
+  position: fixed;
+  inset: -30vmax;
+  z-index: -1;
+  pointer-events: none;
+
+  background:
+    radial-gradient(closest-side at 30% 30%, rgba(156, 200, 255, .085), transparent),
+    radial-gradient(closest-side at 70% 60%, rgba(158, 242, 191, .06),  transparent),
+    radial-gradient(closest-side at 50% 85%, rgba(255, 217, 138, .045), transparent);
+
+  filter: blur(40px);
+  animation: drift 44s var(--ease-both) infinite alternate;
+  will-change: transform;
+}
+
+@keyframes drift {
+  0%   { transform: translate3d(-4%, -3%, 0) scale(1);    }
+  50%  { transform: translate3d( 5%,  4%, 0) scale(1.12); }
+  100% { transform: translate3d(-2%,  6%, 0) scale(1.04); }
+}
+
+
+/* =============================================
+   REVEAL
+
+   Opt-in via [data-reveal]. motion.js flips .is-in when the
+   element enters the viewport (or immediately, for content
+   that was just rendered into an already-visible panel).
+
+   The blur is what separates this from a plain fade — it
+   reads as focus pulling in rather than opacity ramping.
+============================================= */
+
+[data-reveal] {
+
+  opacity: 0;
+  transform: translate3d(0, 16px, 0) scale(.99);
+  filter: blur(7px);
+
+  transition:
+    opacity   var(--dur-3) var(--ease-out),
+    transform var(--dur-3) var(--ease-out),
+    filter    var(--dur-3) var(--ease-out);
+
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+[data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+/* Reveals that slide in from the side instead of upward —
+   used for the routing banner, which reads as arriving. */
+[data-reveal="side"] {
+  transform: translate3d(-14px, 0, 0);
+}
+
+
+/* =============================================
+   CARD PHYSICS
+
+   Small, uniform, and applied only to things that are
+   genuinely card-like. Panels get a light instead of a lift,
+   because lifting a full-width section looks unstable.
+============================================= */
+
+.stats article,
+.flag,
+.check,
+.outreach-item,
+.axis {
+  transition:
+    transform    var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out),
+    box-shadow   var(--dur-2) var(--ease-out);
+}
+
+.stats article:hover,
+.flag:hover,
+.check:hover,
+.outreach-item:hover,
+.axis:hover {
+  transform: translate3d(0, -2px, 0);
+  border-color: #3a4756;
+  box-shadow: 0 12px 30px -18px rgba(0, 0, 0, .9);
+}
+
+.panel {
+  position: relative;
+  transition: border-color var(--dur-3) var(--ease-out);
+}
+
+/* A hairline that brightens along the top edge on hover. */
+.panel::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(156, 200, 255, .55), transparent);
+  opacity: 0;
+  transition: opacity var(--dur-3) var(--ease-out);
+}
+
+.panel:hover::after { opacity: 1; }
+
+
+/* =============================================
+   CONTROLS
+============================================= */
+
+button {
+  transition:
+    transform  var(--dur-1) var(--ease-out),
+    filter     var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-2) var(--ease-out);
+}
+
+button:hover:not(:disabled)  { transform: translate3d(0, -1px, 0); filter: brightness(1.08); }
+button:active:not(:disabled) { transform: translate3d(0, 1px, 0) scale(.985); }
+
+input,
+textarea,
+select {
+  transition:
+    border-color var(--dur-2) var(--ease-out),
+    box-shadow   var(--dur-2) var(--ease-out),
+    background   var(--dur-2) var(--ease-out);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  box-shadow: 0 0 0 3px rgba(156, 200, 255, .14);
+}
+
+/* The submit button while the pipeline is running. A sheen
+   travelling left to right — indeterminate on purpose. */
+.primary.is-working {
+  position: relative;
+  overflow: hidden;
+}
+
+.primary.is-working::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, .22), transparent 80%);
+  transform: translateX(-100%);
+  animation: sheen 1.25s linear infinite;
+}
+
+@keyframes sheen {
+  to { transform: translateX(100%); }
+}
+
+
+/* =============================================
+   THE FILM
+
+   Injected into the result panel by motion.js while an
+   assessment runs, and dissolved once the result is on screen.
+
+   Structure:
+
+     .film
+       .film-head
+       .film-rail
+         .film-beam          <- travels while state is running
+         .film-stage         <- one per pipeline stage
+           .film-node
+           .film-body
+           .film-mark
+============================================= */
+
+.film {
+  position: relative;
+  animation: film-in var(--dur-3) var(--ease-out) both;
+}
+
+@keyframes film-in {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+
+.film.is-dissolving {
+  animation: film-out var(--dur-2) var(--ease-both) both;
+  pointer-events: none;
+}
+
+@keyframes film-out {
+  to { opacity: 0; transform: translate3d(0, -8px, 0) scale(.985); filter: blur(6px); }
+}
+
+.film-head h2 {
+  margin: 2px 0 4px;
+}
+
+.film-sub {
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.film-rail {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 30px;
+  position: relative;
+}
+
+/* The static spine. */
+.film-rail::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+/* The travelling light. Only visible while we genuinely do
+   not know how far along the pipeline is. */
+.film-beam {
+  position: absolute;
+  left: 8px;
+  width: 4px;
+  height: 58px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, transparent, var(--blue), transparent);
+  filter: blur(1px);
+  opacity: 0;
+  transition: opacity var(--dur-2) var(--ease-out);
+}
+
+.film[data-state="running"] .film-beam {
+  opacity: .9;
+  animation: beam 1.9s var(--ease-both) infinite;
+}
+
+@keyframes beam {
+  0%   { top: -10%; }
+  100% { top: 100%; }
+}
+
+
+/* ---- stages ---- */
+
+.film-stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  padding: 11px 0;
+  align-items: start;
+}
+
+.film-node {
+  position: absolute;
+  left: -30px;
+  top: 15px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  transition:
+    border-color var(--dur-2) var(--ease-out),
+    box-shadow   var(--dur-3) var(--ease-out),
+    transform    var(--dur-2) var(--ease-spring);
+}
+
+.film-node i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--line);
+  transition: background var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-spring);
+}
+
+.film-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--muted);
+  transition: color var(--dur-2) var(--ease-out);
+}
+
+.film-detail {
+  grid-column: 1 / -1;
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.film-mark {
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: 0;
+  transform: translate3d(-4px, 0, 0);
+  transition:
+    opacity   var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-out),
+    color     var(--dur-2) var(--ease-out);
+}
+
+
+/* ---- pending: we do not know yet, and we say so ---- */
+
+.film-stage.is-pending .film-detail {
+  color: transparent;
+  border-radius: 4px;
+  background:
+    linear-gradient(90deg, #1b212a 25%, #232b36 37%, #1b212a 63%)
+    0 0 / 400% 100%;
+  animation: shimmer 1.4s linear infinite;
+  max-width: 78%;
+}
+
+@keyframes shimmer {
+  to { background-position: -200% 0; }
+}
+
+
+/* ---- resolved ---- */
+
+.film-stage.is-done .film-name { color: var(--text); }
+.film-stage.is-done .film-mark { opacity: 1; transform: none; }
+
+.film-stage.is-done .film-node   { transform: scale(1.06); }
+.film-stage.is-done .film-node i { transform: scale(1.5); }
+
+.film-stage.is-done.tone-good    .film-node { border-color: var(--green);  box-shadow: 0 0 0 5px rgba(158,242,191,.10); }
+.film-stage.is-done.tone-warn    .film-node { border-color: var(--yellow); box-shadow: 0 0 0 5px rgba(255,217,138,.10); }
+.film-stage.is-done.tone-bad     .film-node { border-color: var(--red);    box-shadow: 0 0 0 5px rgba(255,157,157,.10); }
+.film-stage.is-done.tone-neutral .film-node { border-color: var(--blue);   box-shadow: 0 0 0 5px rgba(156,200,255,.10); }
+
+/* The node's dot is filled; the mark beside it is text. */
+.film-stage.is-done.tone-good    .film-node i { background: var(--green);  }
+.film-stage.is-done.tone-warn    .film-node i { background: var(--yellow); }
+.film-stage.is-done.tone-bad     .film-node i { background: var(--red);    }
+.film-stage.is-done.tone-neutral .film-node i { background: var(--blue);   }
+
+.film-stage.is-done.tone-good    .film-mark { color: var(--green);  }
+.film-stage.is-done.tone-warn    .film-mark { color: var(--yellow); }
+.film-stage.is-done.tone-bad     .film-mark { color: var(--red);    }
+.film-stage.is-done.tone-neutral .film-mark { color: var(--blue);   }
+
+/* Detail text arriving on resolve. */
+.film-stage.is-done .film-detail {
+  background: none;
+  animation: detail-in var(--dur-3) var(--ease-out) both;
+}
+
+@keyframes detail-in {
+  from { opacity: 0; transform: translate3d(0, 5px, 0); filter: blur(4px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+
+
+/* =============================================
+   GAUGES
+
+   The two axis scores draw themselves. stroke-dashoffset is
+   set inline by motion.js so the arc is correct even if the
+   transition never runs.
+============================================= */
+
+.gauge {
+  position: relative;
+  width: 108px;
+  height: 108px;
+  margin: 4px 0 8px;
+}
+
+.gauge svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+.gauge circle {
+  fill: none;
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+
+.gauge .gauge-track { stroke: var(--line); }
+
+.gauge .gauge-arc {
+  stroke: var(--blue);
+  stroke-dasharray: 326.7;
+  stroke-dashoffset: 326.7;
+  transition: stroke-dashoffset var(--dur-4) var(--ease-out), stroke var(--dur-3) linear;
+}
+
+.gauge[data-tone="good"]    .gauge-arc { stroke: var(--green);  }
+.gauge[data-tone="warn"]    .gauge-arc { stroke: var(--yellow); }
+.gauge[data-tone="bad"]     .gauge-arc { stroke: var(--red);    }
+.gauge[data-tone="neutral"] .gauge-arc { stroke: var(--blue);   }
+
+.gauge-num {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  line-height: 1;
+}
+
+.gauge-num strong {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.gauge-num span {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+
+/* =============================================
+   DASHBOARD
+============================================= */
+
+#claimsTable tr {
+  transition: background var(--dur-2) var(--ease-out);
+}
+
+#claimsTable tr:hover {
+  background: rgba(156, 200, 255, .045);
+}
+
+/* A row that was not in the previous render. */
+#claimsTable tr.is-new td {
+  animation: row-flash 1.5s var(--ease-out) both;
+}
+
+@keyframes row-flash {
+  0%   { background: rgba(156, 200, 255, .22); }
+  100% { background: transparent; }
+}
+
+.stats strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.live-dot i {
+  animation: pulse 2.4s var(--ease-both) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1;  transform: scale(1);   }
+  50%      { opacity: .35; transform: scale(.7); }
+}
+
+
+/* =============================================
+   REDUCED MOTION
+
+   Everything above collapses to its end state. Nothing
+   becomes invisible or unreadable.
+============================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+
+  body::before { animation: none; }
+
+  [data-reveal] { opacity: 1; transform: none; filter: none; }
+
+  .film-beam { display: none; }
+
+  .film-stage.is-pending .film-detail {
+    color: var(--muted);
+    background: none;
+    animation: none;
+  }
+
+  .primary.is-working::after { display: none; }
+
+  .gauge .gauge-arc { transition: none; }
+}
+
+
+/* =============================================
+   AXIS LAYOUT
+
+   The gauge replaces the flat number in .axis-score, so the
+   card centres on it instead of running left-aligned.
+============================================= */
+
+.axis {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.axis-label { align-self: stretch; text-align: left; }
+.axis-note  { align-self: stretch; text-align: left; }

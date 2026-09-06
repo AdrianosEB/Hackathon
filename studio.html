@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light" />
+
+  <title>Claim Integrity — Studio</title>
+
+  <link rel="stylesheet" href="/studio.css" />
+
+</head>
+
+<body>
+
+
+  <!-- =========================================================
+       SCENE RAIL
+       Persistent. Steps unlock as they become reachable, and a
+       locked step says why rather than silently doing nothing.
+  ========================================================== -->
+
+  <nav class="rail" aria-label="Scenes">
+
+    <a class="rail-mark" href="/" title="Back to the original page">
+      <span class="rail-dot"></span>
+      <span class="rail-mark-text">Claim Integrity</span>
+    </a>
+
+    <ol class="rail-steps" id="railSteps"></ol>
+
+    <p class="rail-hint">
+      <kbd>←</kbd><kbd>→</kbd> to move
+    </p>
+
+  </nav>
+
+
+  <main class="stage" id="stage">
+
+
+    <!-- ===================== 1 · COVER ===================== -->
+
+    <section class="scene scene-cover" data-scene="cover" aria-label="Cover">
+
+      <div class="scene-inner cover-inner">
+
+        <p class="eyebrow reveal">DNHACKS · CLAIM INTEGRITY</p>
+
+        <h1 class="display reveal">
+          Two questions,<br />
+          <em>kept separate.</em>
+        </h1>
+
+        <p class="lede reveal">
+          How much of this claim's own content needs a person to look at it — and how well
+          does the provider record match the federal registry? Answering them together is how
+          a coding error turns into an accusation. So we don't.
+        </p>
+
+        <div class="cover-axes reveal">
+
+          <div class="cover-axis">
+            <span class="axis-tag">AXIS ONE</span>
+            <h2>The claim</h2>
+            <p>Deterministic rules over the line items. Instant, repeatable, no model involved.</p>
+          </div>
+
+          <div class="cover-axis">
+            <span class="axis-tag">AXIS TWO</span>
+            <h2>The provider record</h2>
+            <p>An agent panel against the federal registry. Slow, fallible, and never allowed
+              to block intake.</p>
+          </div>
+
+        </div>
+
+        <div class="cover-actions reveal">
+          <button class="btn btn-primary" data-goto="subject">Choose a subject →</button>
+          <button class="btn btn-quiet" data-goto="ledger">See the ledger</button>
+        </div>
+
+        <p class="cover-coverage reveal" id="coverCoverage">Checking what is live…</p>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================== 2 · SUBJECT ===================== -->
+
+    <section class="scene scene-subject" data-scene="subject" aria-label="Choose a subject">
+
+      <div class="scene-inner">
+
+        <header class="scene-head">
+          <p class="eyebrow">SCENE TWO</p>
+          <h1 class="display-sm">Pick something to run</h1>
+          <p class="lede lede-sm">
+            Nine fixtures. Every NPI begins with 9 — a range CMS has never assigned — so no
+            real provider can be implicated. Each one states what it is supposed to prove
+            before it runs, which is the only way a demo can be wrong in public.
+          </p>
+        </header>
+
+        <div class="subjects" id="subjects"></div>
+
+        <div class="scene-foot">
+          <button class="btn btn-quiet" data-goto="cover">← Back</button>
+          <button class="btn btn-primary" id="runBtn" disabled>Run both axes →</button>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================== 3 · RUN ===================== -->
+
+    <section class="scene scene-run" data-scene="run" aria-label="Running">
+
+      <div class="scene-inner run-inner">
+
+        <header class="scene-head">
+          <p class="eyebrow">SCENE THREE</p>
+          <h1 class="display-sm" id="runTitle">Running both axes</h1>
+          <p class="lede lede-sm" id="runSub">
+            The claim rules finish immediately. The provider panel is talking to the federal
+            registry, so it takes as long as it takes — there is no progress to report until
+            it answers.
+          </p>
+        </header>
+
+        <ol class="rail-film" id="film"></ol>
+
+        <div class="scene-foot">
+          <button class="btn btn-quiet" data-goto="subject" id="runBackBtn">← Choose another</button>
+          <button class="btn btn-primary" data-goto="verdict" id="toVerdictBtn" disabled>
+            See the verdict →
+          </button>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================== 4 · VERDICT ===================== -->
+
+    <section class="scene scene-verdict" data-scene="verdict" aria-label="Verdict">
+
+      <div class="scene-inner">
+
+        <header class="scene-head">
+          <p class="eyebrow">SCENE FOUR</p>
+          <h1 class="display-sm" id="verdictClaim">Verdict</h1>
+          <p class="lede lede-sm" id="verdictProvider"></p>
+        </header>
+
+        <div id="verdictRouting"></div>
+
+        <div class="verdict-axes" id="verdictAxes"></div>
+
+        <div class="verdict-meta" id="verdictMeta"></div>
+
+        <div class="scene-foot">
+          <button class="btn btn-quiet" data-goto="run">← The run</button>
+          <button class="btn btn-primary" data-goto="evidence">Show the evidence →</button>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================== 5 · EVIDENCE ===================== -->
+
+    <section class="scene scene-evidence" data-scene="evidence" aria-label="Evidence">
+
+      <div class="scene-inner">
+
+        <header class="scene-head">
+          <p class="eyebrow">SCENE FIVE</p>
+          <h1 class="display-sm">What it actually saw</h1>
+          <p class="lede lede-sm">
+            Every observation carries the evidence behind it and, where one exists, the
+            ordinary explanation. A finding you cannot argue with is not a finding.
+          </p>
+        </header>
+
+        <div class="dossier" id="dossier"></div>
+
+        <div class="scene-foot">
+          <button class="btn btn-quiet" data-goto="verdict">← The verdict</button>
+          <button class="btn btn-primary" data-goto="ledger">The ledger →</button>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================== 6 · LEDGER ===================== -->
+
+    <section class="scene scene-ledger" data-scene="ledger" aria-label="Ledger">
+
+      <div class="scene-inner">
+
+        <header class="scene-head">
+          <p class="eyebrow">SCENE SIX</p>
+          <h1 class="display-sm">Everything assessed</h1>
+          <p class="lede lede-sm">
+            Both axes side by side, per claim. Where a provider band is missing, the check did
+            not complete — that is a gap in our coverage, not a finding about the provider.
+          </p>
+        </header>
+
+        <div class="tiles" id="tiles"></div>
+
+        <div class="ledger-wrap">
+          <table class="ledger">
+            <thead>
+              <tr>
+                <th>Claim</th>
+                <th>Provider</th>
+                <th class="num">Billed</th>
+                <th>Claim axis</th>
+                <th>Provider axis</th>
+                <th>Routed</th>
+                <th class="num">To review</th>
+              </tr>
+            </thead>
+            <tbody id="ledgerBody"></tbody>
+          </table>
+        </div>
+
+        <div class="scene-foot">
+          <button class="btn btn-quiet" data-goto="evidence">← The evidence</button>
+          <button class="btn btn-primary" data-goto="subject">Run another →</button>
+        </div>
+
+      </div>
+
+    </section>
+
+
+  </main>
+
+
+  <p class="disclaimer">
+    Screening support only. Observations indicate what a person should look at — not fraud,
+    and not a coverage determination. Provider bands describe the state of the evidence,
+    never the character of a provider.
+  </p>
+
+
+  <script src="/scenarios.js"></script>
+  <script src="/studio.js"></script>
+
+</body>
+
+</html>
