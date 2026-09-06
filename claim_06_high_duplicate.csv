@@ -1,0 +1,3 @@
+claimNumber,providerName,patientLabel,diagnosisCodes,clinicalNote,code,description,serviceDate,units,amount
+CLM-10006,Northside Medical Center,Patient F,R10.9,Patient reports mild abdominal discomfort. Stable and in no acute distress.,74177,CT abdomen/pelvis,2026-09-05,1,450
+CLM-10006,Northside Medical Center,Patient F,R10.9,Patient reports mild abdominal discomfort. Stable and in no acute distress.,74177,CT abdomen/pelvis,2026-09-05,1,450

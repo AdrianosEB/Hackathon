@@ -1,0 +1,3 @@
+claimNumber,providerName,patientLabel,diagnosisCodes,clinicalNote,code,description,serviceDate,units,amount
+CLM-10003,Lakeside Health Clinic,Patient C,R07.9,Patient reports intermittent chest discomfort and remains stable during outpatient evaluation.,93000,Electrocardiogram,2026-09-03,1,145
+CLM-10003,Lakeside Health Clinic,Patient C,R07.9,Patient reports intermittent chest discomfort and remains stable during outpatient evaluation.,99214,Office visit,2026-09-03,1,190

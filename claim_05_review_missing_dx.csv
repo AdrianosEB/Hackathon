@@ -1,0 +1,3 @@
+claimNumber,providerName,patientLabel,diagnosisCodes,clinicalNote,code,description,serviceDate,units,amount
+CLM-10005,Downtown Primary Care,Patient E,,Routine outpatient follow-up visit documented. No diagnosis code was included with the submitted claim.,99213,Office visit,2026-09-05,1,108
+CLM-10005,Downtown Primary Care,Patient E,,Routine outpatient follow-up visit documented. No diagnosis code was included with the submitted claim.,80053,Comprehensive metabolic panel,2026-09-05,1,36
