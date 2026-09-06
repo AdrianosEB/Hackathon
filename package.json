@@ -6,7 +6,9 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "example": "node examples/run-orchestration.js",
-    "example:merge": "node examples/merge-demo.js"
+    "example:merge": "node examples/merge-demo.js",
+    "example:call": "node examples/call-demo.js",
+    "example:demo": "node examples/run-demo-files.js"
   },
   "dependencies": {
     "dotenv": "^16.6.1",

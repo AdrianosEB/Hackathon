@@ -4,14 +4,17 @@
 //   npm run example
 //
 // Walks every scenario in fixtures.js through the
-// full two-stage workflow:
+// full three-stage workflow:
 //
-//   claim  -> orchestrateClaim  -> risk + routing
-//   appeal -> orchestrateAppeal -> outcome + routing
+//   claim  -> orchestrateClaim        risk + routing
+//   call   -> orchestrateProviderCall clarification
+//   appeal -> orchestrateAppeal       outcome
 //
-// Nothing is written to the database and no HTTP
-// server is started, so this is safe to run at any
-// time.
+// Nothing is written to the database, no HTTP server
+// is started, and no phone call is placed: the call
+// stage runs against a dry-run queue that reports what
+// it would have dialled. examples/call-demo.js plays
+// the call lifecycle out in full.
 //
 // WITHOUT an OPENAI_API_KEY the AI reviewers report
 // themselves unavailable and the run is fully
@@ -28,6 +31,10 @@ import "dotenv/config";
 import {
   orchestrateClaim
 } from "../orchestration/claim-orchestrator.js";
+
+import {
+  orchestrateProviderCall
+} from "../orchestration/call-orchestrator.js";
 
 import {
   orchestrateAppeal
@@ -58,6 +65,26 @@ const AI_ENABLED =
   Boolean(
     process.env.OPENAI_API_KEY
   );
+
+
+// --------------------------------------------------
+// Stands in for the real Vapi queue.
+//
+// Accepts the claim and reports a position, exactly
+// as queueVapiCall does, but never dials and never
+// drives the lifecycle handlers.
+// --------------------------------------------------
+
+const DRY_RUN_QUEUE =
+  () => ({
+
+    queued:
+      true,
+
+    position:
+      1
+
+  });
 
 
 const failures =
@@ -298,7 +325,68 @@ for (
 
 
   // ------------------------------------------------
-  // STAGE 2
+  // STAGE 2 - the provider clarification call
+  //
+  // Placed only when stage one routed the claim to a
+  // human. No database, no dialling.
+  // ------------------------------------------------
+
+  const callResult =
+    orchestrateProviderCall(
+      scenario.claim,
+      claimDecision,
+      {
+
+        store:
+          null,
+
+        queue:
+          DRY_RUN_QUEUE,
+
+        logger:
+          QUIET
+
+      }
+    );
+
+
+  if (
+    callResult.queued
+  ) {
+
+    console.log(
+      `  call ................ placed, ${
+        callResult.brief.findings.length
+      } finding(s), leads with ${
+        callResult.brief.lines[0]
+      }`
+    );
+
+  } else {
+
+    console.log(
+      `  call ................ none (${callResult.reason})`
+    );
+
+  }
+
+
+  // A claim is called about exactly when a human was
+  // asked to look at it. This holds in both modes.
+
+  console.log(
+    `  call matches routing  ${
+      check(
+        `${scenario.claim.claimNumber} call matches routing`,
+        callResult.queued,
+        claimDecision.routing.needsHumanReview
+      )
+    }`
+  );
+
+
+  // ------------------------------------------------
+  // STAGE 3
   //
   // The appeal reviewers judge an appeal against the
   // STORED claim, so hand them the claim plus the

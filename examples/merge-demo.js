@@ -172,6 +172,10 @@ for (
 }
 
 
+const problems =
+  [];
+
+
 // --------------------------------------------------
 // What to look for
 // --------------------------------------------------
@@ -204,10 +208,6 @@ console.log("");
 // --------------------------------------------------
 // Assertions
 // --------------------------------------------------
-
-const problems =
-  [];
-
 
 const duplicateFlag =
   analysis.flags.find(
@@ -268,6 +268,138 @@ if (
 
   problems.push(
     `expected 3 flags after merge, got ${analysis.flags.length}`
+  );
+
+}
+
+
+// ==================================================
+// CASE 2
+//
+// The AI returns MORE opinions about a code than
+// there are deterministic findings for it.
+//
+// The extra opinions become their own ai-only
+// findings. The one thing that must NOT happen is an
+// extra opinion landing on an ai-only finding added
+// moments earlier in the same merge, because that
+// would overwrite the opinion already there.
+// ==================================================
+
+const crowded = {
+
+  flags: [
+
+    {
+      type: "duplicate",
+      severity: "high",
+      lineCode: "99214",
+      message: "Procedure 99214 appears more than once on the same service date.",
+      evidence: "2 entries for procedure 99214 were billed on 2026-03-04.",
+      detectedBy: ["rules"]
+    }
+
+  ]
+
+};
+
+
+mergeAiFindings(
+  crowded,
+  {
+
+    available:
+      true,
+
+    findings: [
+
+      {
+        lineCode: "99214",
+        severity: "medium",
+        reason: "duplicate_service",
+        message: "First opinion.",
+        evidence: ""
+      },
+
+      {
+        lineCode: "99214",
+        severity: "medium",
+        reason: "unusual_billing",
+        message: "Second opinion.",
+        evidence: ""
+      },
+
+      {
+        lineCode: "99214",
+        severity: "medium",
+        reason: "missing_support",
+        message: "Third opinion.",
+        evidence: ""
+      }
+
+    ]
+
+  }
+);
+
+
+console.log(
+  "CASE 2: three AI opinions, one deterministic finding"
+);
+
+
+for (
+  const flag
+  of crowded.flags
+) {
+
+  console.log(
+    `  ${flag.type} (${flag.detectedBy.join("+")}) ai: ${
+      flag.aiReview?.message ||
+      "none"
+    }`
+  );
+
+}
+
+
+const retained =
+  new Set(
+    crowded.flags
+      .map(
+        (flag) =>
+          flag.aiReview?.message
+      )
+      .filter(Boolean)
+  );
+
+
+console.log(
+  `  distinct opinions retained: ${retained.size} of 3`
+);
+
+console.log("");
+
+
+if (
+  retained.size !==
+  3
+) {
+
+  problems.push(
+    `an AI opinion was overwritten: ${retained.size} of 3 retained`
+  );
+
+}
+
+
+if (
+  crowded.flags.length !==
+  3
+) {
+
+  problems.push(
+    `expected 3 flags in the crowded case, got ${crowded.flags.length}`
   );
 
 }

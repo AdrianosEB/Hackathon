@@ -202,12 +202,19 @@ function normalizeAiFinding(
 //   2. same line code, any still-unclaimed flag
 //   3. nothing -> the AI finding stands on its own
 //
-// A flag is claimed at most once so two AI findings
-// never collapse into a single flag.
+// Two rules keep opinions from overwriting each other:
+//
+//   - a flag is claimed at most once, so two AI
+//     findings never collapse into one flag
+//
+//   - only DETERMINISTIC flags are candidates. An
+//     ai-only flag appended earlier in this same merge
+//     must not become a target for a later finding,
+//     or its opinion would be overwritten too.
 // --------------------------------------------------
 
 function findFlagForAiFinding(
-  flags,
+  candidates,
   claimed,
   aiFinding
 ) {
@@ -231,21 +238,21 @@ function findFlagForAiFinding(
   }
 
 
-  const candidates =
-    flags.filter(
-      (flag, index) =>
+  const available =
+    candidates.filter(
+      (candidate) =>
 
         !claimed.has(
-          index
+          candidate.index
         ) &&
 
-        flag.lineCode ===
+        candidate.flag.lineCode ===
           lineCode
     );
 
 
   if (
-    candidates.length ===
+    available.length ===
     0
   ) {
 
@@ -262,16 +269,16 @@ function findFlagForAiFinding(
 
 
   const preferred =
-    candidates.find(
-      (flag) =>
+    available.find(
+      (candidate) =>
         affinity.includes(
-          flag.type
+          candidate.flag.type
         )
     );
 
 
   return preferred ||
-    candidates[0];
+    available[0];
 
 }
 
@@ -307,6 +314,18 @@ export function mergeAiFindings(
       : [];
 
 
+  // Snapshot the deterministic flags BEFORE merging.
+  // Anything appended below is not a merge target.
+
+  const candidates =
+    analysis.flags.map(
+      (flag, index) => ({
+        flag,
+        index
+      })
+    );
+
+
   const claimed =
     new Set();
 
@@ -316,16 +335,16 @@ export function mergeAiFindings(
     of aiFindings
   ) {
 
-    const matchingFlag =
+    const match =
       findFlagForAiFinding(
-        analysis.flags,
+        candidates,
         claimed,
         aiFinding
       );
 
 
     if (
-      !matchingFlag
+      !match
     ) {
 
       analysis.flags.push(
@@ -341,10 +360,12 @@ export function mergeAiFindings(
 
 
     claimed.add(
-      analysis.flags.indexOf(
-        matchingFlag
-      )
+      match.index
     );
+
+
+    const matchingFlag =
+      match.flag;
 
 
     if (

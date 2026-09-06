@@ -1,6 +1,14 @@
 # Orchestration
 
-Both stages of the workflow are the same four steps:
+The workflow has three stages:
+
+```
+claim  ─→  orchestrateClaim         risk + routing
+call   ─→  orchestrateProviderCall  clarification
+appeal ─→  orchestrateAppeal        outcome
+```
+
+The two REVIEW stages are the same four steps:
 
 ```
 deterministic reviewer  ─┐
@@ -8,8 +16,10 @@ deterministic reviewer  ─┐
 AI reviewer             ─┘
 ```
 
-`pipeline.js` owns those four steps. The two orchestrators are configuration
-of it — they supply the reviewers and say how the two opinions combine.
+`pipeline.js` owns those four steps. The claim and appeal orchestrators are
+configuration of it — they supply the reviewers and say how the two opinions
+combine. The call stage is not a review, so it does not use the pipeline; it
+acts on the decision the claim stage already made.
 
 | | claim stage | appeal stage |
 |---|---|---|
@@ -18,6 +28,37 @@ of it — they supply the reviewers and say how the two opinions combine.
 | AI reviewer | `ai-reviewer.js` | `appeal-ai-reviewer.js` |
 | reconcile | the reviewers **add** to one shared finding list; worst surviving severity wins | the reviewers **judge the same original findings**; the more conservative opinion wins |
 | routes to | `auto_clear` / `human_review` / `priority_human_review` | `close_appeal` / `human_review_remaining` / `human_review_unresolved` |
+
+Between the two sits the voice agent.
+
+## The provider call
+
+`orchestrateProviderCall(claim, decision)` runs when — and only when — the
+claim stage routed a claim to a human. It calls the provider's billing contact
+and asks about the findings, so the reviewer picks the claim up with the
+provider's answer already attached.
+
+It owns whether a call happens, the brief the agent reads, and persisting the
+call and its transcript. It does **not** own the call: `vapi.js` still owns the
+outbound request, the one-at-a-time queue, and the polling.
+
+The brief is ordered worst finding first, because a phone call is linear.
+Nothing is dropped — a finding left out of the call is a finding the provider
+never got asked about.
+
+Two things are injected, which is what makes the stage testable:
+
+- `store` — `{ createVapiCall, updateVapiCallStatus, completeVapiCall }`, so
+  the orchestration layer has no database import of its own
+- `queue` — defaults to `queueVapiCall`; the examples replace it with a fake
+  that plays a call lifecycle back without dialling
+
+The call runs in the background. Claim analysis never waits on a phone call,
+and a store failure is logged and swallowed rather than taking down a call
+already in progress.
+
+The call gathers clarification. It does not negotiate, accept an explanation,
+close a finding, or make any payment decision.
 
 ## Decision record
 
@@ -80,11 +121,18 @@ judgement. It decides which work items a human looks at, and in what order.
 ## Examples
 
 ```bash
-npm run example        # all scenarios, both stages, end to end
+npm run example        # every scenario, all three stages, end to end
+npm run example:demo   # the shipped demo/ and demo_appeal/ files
+npm run example:call   # the call lifecycle, against a fake Vapi queue
 npm run example:merge  # the claim-stage merge in isolation
 ```
 
-Neither touches the database or starts a server. Without an `OPENAI_API_KEY`
-the run is fully deterministic and every expectation is checked; with a key it
-runs hybrid, still checks the deterministic layer, and reports routing without
-asserting it.
+None of them touch the database, start a server, or place a call. Without an
+`OPENAI_API_KEY` each run is fully deterministic and every expectation is
+checked; with a key they run hybrid, still check the deterministic layer, and
+report the merged result without asserting it.
+
+`example:demo` is the one that protects a live demo: it checks that every file
+in `demo/` and `demo_appeal/` still produces the outcome its filename promises,
+so an edited threshold or an edited demo file cannot quietly break the script
+you are about to walk someone through.

@@ -11,9 +11,13 @@ import {
 } from "./orchestration/appeal-orchestrator.js";
 
 import {
-  queueVapiCall,
   getVapiQueueStatus
 } from "./vapi.js";
+
+import {
+  orchestrateProviderCall,
+  normalizeTranscript
+} from "./orchestration/call-orchestrator.js";
 
 import {
   createClaim,
@@ -35,6 +39,25 @@ import {
   completeVapiCall,
   getVapiCallsForClaim
 } from "./db.js";
+
+
+// =============================================
+// Call persistence
+//
+// Injected into the call orchestrator so the
+// orchestration layer stays free of database
+// imports and can be exercised against a fake.
+// =============================================
+
+const VAPI_CALL_STORE = {
+
+  createVapiCall,
+
+  updateVapiCallStatus,
+
+  completeVapiCall
+
+};
 
 
 // =============================================
@@ -511,102 +534,6 @@ function validateAppeal(
 
 
 // =============================================
-// Normalize Vapi transcript
-// =============================================
-
-function normalizeTranscript(
-  rawTranscript
-) {
-
-  if (
-    !rawTranscript
-  ) {
-
-    return "";
-
-  }
-
-
-  if (
-    typeof rawTranscript ===
-    "string"
-  ) {
-
-    return rawTranscript;
-
-  }
-
-
-  if (
-    Array.isArray(
-      rawTranscript
-    )
-  ) {
-
-    return rawTranscript
-      .map(
-        (entry) => {
-
-          const speaker =
-
-            entry.role ===
-              "assistant"
-
-              ? "Assistant"
-
-              : entry.role ===
-                  "user"
-
-                ? "Customer"
-
-                : entry.role ||
-                  "Speaker";
-
-
-          const content =
-
-            entry.message ||
-
-            entry.content ||
-
-            entry.text ||
-
-            "";
-
-
-          return (
-            `${speaker}: ${content}`
-          );
-
-        }
-      )
-      .join(
-        "\n"
-      );
-
-  }
-
-
-  try {
-
-    return JSON.stringify(
-      rawTranscript,
-      null,
-      2
-    );
-
-  } catch {
-
-    return String(
-      rawTranscript
-    );
-
-  }
-
-}
-
-
-// =============================================
 // Dashboard
 // =============================================
 
@@ -856,238 +783,21 @@ app.post(
 
 
       // =======================================
-      // REVIEW + HIGH ENTER VAPI QUEUE
+      // PROVIDER CLARIFICATION CALL
+      //
+      // Runs in the background. Whether it happens
+      // at all was already decided by the claim
+      // stage routing.
       // =======================================
 
-      const shouldCall =
-        decision.routing.shouldCallProvider;
-
-
-      if (
-        shouldCall
-      ) {
-
-        const queueResult =
-          queueVapiCall(
-
-            cleanClaim,
-
-            analysis.flags,
-
-            {
-
-              // =================================
-              // CALL STARTED
-              // =================================
-
-              onStarted:
-                async (
-                  result
-                ) => {
-
-                  console.log(
-                    `Clarification call started for ${cleanClaim.claimNumber}`
-                  );
-
-
-                  try {
-
-                    createVapiCall(
-
-                      cleanClaim
-                        .claimNumber,
-
-                      result.callId,
-
-                      result.status ||
-                        "created"
-
-                    );
-
-                  } catch (
-                    databaseError
-                  ) {
-
-                    console.error(
-                      "Could not save Vapi call:",
-                      databaseError.message
-                    );
-
-                  }
-
-                },
-
-
-              // =================================
-              // POLLING UPDATE
-              // =================================
-
-              onUpdate:
-                async (
-                  call
-                ) => {
-
-                  try {
-
-                    updateVapiCallStatus(
-
-                      call.id,
-
-                      call.status ||
-                        "in-progress"
-
-                    );
-
-                  } catch (
-                    databaseError
-                  ) {
-
-                    console.error(
-                      "Could not update Vapi call:",
-                      databaseError.message
-                    );
-
-                  }
-
-                },
-
-
-              // =================================
-              // CALL COMPLETED
-              // =================================
-
-              onCompleted:
-                async (
-                  call
-                ) => {
-
-                  try {
-
-                    const rawTranscript =
-
-                      call.artifact
-                        ?.transcript ||
-
-                      call.transcript ||
-
-                      "";
-
-
-                    const transcript =
-                      normalizeTranscript(
-                        rawTranscript
-                      );
-
-
-                    const messages =
-
-                      call.artifact
-                        ?.messages ||
-
-                      call.messages ||
-
-                      [];
-
-
-                    completeVapiCall(
-                      call.id,
-                      {
-
-                        status:
-                          call.status ||
-                          "ended",
-
-                        endedReason:
-                          call.endedReason ||
-                          null,
-
-                        transcript,
-
-                        messages,
-
-                        startedAt:
-                          call.startedAt ||
-                          null,
-
-                        endedAt:
-                          call.endedAt ||
-                          null
-
-                      }
-                    );
-
-
-                    console.log(
-                      `Clarification call completed for ${cleanClaim.claimNumber}`
-                    );
-
-                  } catch (
-                    databaseError
-                  ) {
-
-                    console.error(
-                      "Could not complete Vapi call:",
-                      databaseError.message
-                    );
-
-                  }
-
-                },
-
-
-              // =================================
-              // CALL FAILED
-              // =================================
-
-              onFailed:
-                async (
-                  error,
-                  callId
-                ) => {
-
-                  console.error(
-                    `Clarification call failed for ${cleanClaim.claimNumber}:`,
-                    error.message
-                  );
-
-
-                  if (
-                    callId
-                  ) {
-
-                    try {
-
-                      updateVapiCallStatus(
-                        callId,
-                        "failed"
-                      );
-
-                    } catch (
-                      databaseError
-                    ) {
-
-                      console.error(
-                        "Could not save failed Vapi call:",
-                        databaseError.message
-                      );
-
-                    }
-
-                  }
-
-                }
-
-            }
-
-          );
-
-
-        console.log(
-          `Vapi queue result for ${cleanClaim.claimNumber}:`,
-          queueResult
-        );
-
-      }
+      orchestrateProviderCall(
+        cleanClaim,
+        decision,
+        {
+          store:
+            VAPI_CALL_STORE
+        }
+      );
 
 
       res.json(
