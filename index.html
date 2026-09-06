@@ -1,0 +1,410 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>Claim Integrity</title>
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  />
+
+</head>
+
+
+<body>
+
+
+  <!-- ==========================================
+       TOP BAR
+  =========================================== -->
+
+  <header class="topbar">
+
+    <div class="brand">
+      Claim Integrity
+    </div>
+
+
+    <div class="topbar-actions">
+
+      <button
+        id="providerAnalyticsButton"
+        class="analytics-button"
+        type="button"
+      >
+        Provider Analytics
+      </button>
+
+
+      <span
+        id="headerStatus"
+        class="topbar-status"
+      >
+        Ready
+      </span>
+
+    </div>
+
+  </header>
+
+
+
+  <!-- ==========================================
+       APP
+  =========================================== -->
+
+  <main class="app-shell">
+
+
+    <!-- ========================================
+         LEFT — IMPORT
+    ========================================= -->
+
+    <section class="import-panel">
+
+      <div class="panel-heading">
+
+        <div>
+
+          <h2>
+            Import Claims
+          </h2>
+
+          <p>
+            One bill per CSV file
+          </p>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- ======================================
+           FILE UPLOAD
+      ======================================= -->
+
+      <label
+        class="upload-box"
+        for="csvFiles"
+      >
+
+        <strong>
+          Choose CSV Files
+        </strong>
+
+        <span>
+          Select one or multiple bills
+        </span>
+
+        <input
+          id="csvFiles"
+          type="file"
+          accept=".csv,text/csv"
+          multiple
+        />
+
+      </label>
+
+
+
+      <!-- ======================================
+           BATCH SUMMARY
+      ======================================= -->
+
+      <div
+        id="batchSummary"
+        class="batch-summary hidden"
+      >
+
+        <div>
+
+          <span>
+            Files
+          </span>
+
+          <strong id="totalFiles">
+            0
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            Analyzed
+          </span>
+
+          <strong id="completedFiles">
+            0
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            Failed
+          </span>
+
+          <strong id="failedFiles">
+            0
+          </strong>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- ======================================
+           PROGRESS
+      ======================================= -->
+
+      <div
+        id="progressWrap"
+        class="progress-wrap hidden"
+      >
+
+        <div class="progress-track">
+
+          <div
+            id="progressBar"
+            class="progress-bar"
+          ></div>
+
+        </div>
+
+
+        <div
+          id="progressText"
+          class="muted"
+        >
+          0 / 0
+        </div>
+
+      </div>
+
+
+
+      <!-- ======================================
+           ERROR
+      ======================================= -->
+
+      <div
+        id="importError"
+        class="error hidden"
+      ></div>
+
+
+
+      <!-- ======================================
+           IMPORT QUEUE
+      ======================================= -->
+
+      <div class="section-label">
+        Import Queue
+      </div>
+
+
+      <div
+        id="fileQueue"
+        class="file-queue"
+      >
+
+        <div class="empty-small">
+          No files selected.
+        </div>
+
+      </div>
+
+
+
+      <!-- ======================================
+           PHONE CALL QUEUE
+      ======================================= -->
+
+      <div class="call-queue-section">
+
+        <div class="call-queue-heading">
+
+          <h3>
+            Call Queue
+          </h3>
+
+
+          <span
+            id="callQueueCount"
+            class="queue-count"
+          >
+            0
+          </span>
+
+        </div>
+
+
+        <div
+          id="callQueue"
+          class="call-queue"
+        >
+
+          <div class="empty-small">
+            No clarification calls queued.
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- ========================================
+         RIGHT — CLAIMS
+    ========================================= -->
+
+    <section class="claims-panel">
+
+      <div class="panel-heading">
+
+        <div>
+
+          <h2>
+            Analyzed Claims
+          </h2>
+
+          <p>
+            Select a claim to inspect its evidence
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="claims-workspace">
+
+
+        <!-- Claim list -->
+
+        <aside class="claim-list-pane">
+
+          <div
+            id="claimsList"
+            class="claims-list"
+          >
+
+            <div class="empty-small">
+              No analyzed claims yet.
+            </div>
+
+          </div>
+
+        </aside>
+
+
+
+        <!-- Claim detail -->
+
+        <section class="claim-detail-pane">
+
+          <div
+            id="emptyResult"
+            class="empty-result"
+          >
+            Select an analyzed claim.
+          </div>
+
+
+          <div
+            id="resultContent"
+            class="hidden"
+          ></div>
+
+        </section>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+
+  <!-- ==========================================
+       PROVIDER ANALYTICS
+  =========================================== -->
+
+  <div
+    id="providerAnalyticsModal"
+    class="modal-overlay hidden"
+  >
+
+    <div class="analytics-modal">
+
+      <div class="analytics-modal-header">
+
+        <div>
+
+          <span class="eyebrow">
+            Portfolio View
+          </span>
+
+          <h2>
+            Provider Analytics
+          </h2>
+
+          <p>
+            Review and high-risk rates across analyzed bills
+          </p>
+
+        </div>
+
+
+        <button
+          id="closeProviderAnalytics"
+          class="modal-close"
+          type="button"
+          aria-label="Close provider analytics"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <div
+        id="providerAnalyticsContent"
+        class="analytics-content"
+      >
+
+        <div class="empty-small">
+          Loading provider analytics...
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+  <script src="/script.js"></script>
+
+</body>
+
+</html>
