@@ -15,6 +15,20 @@ import {
 } from "./vapi.js";
 
 import {
+  orchestrateAppealAnalysis
+} from "./appeal/orchestrator.js";
+
+import {
+  ORCHESTRATION
+} from "./appeal/blueprint.js";
+
+import {
+  aiAvailable,
+  activeProvider,
+  activeModel
+} from "./appeal/ai-agents.js";
+
+import {
   createClaim,
   getClaim,
   listClaims,
@@ -1488,6 +1502,139 @@ app.post(
 // =============================================
 // Start server
 // =============================================
+
+
+// =============================================
+// APPEAL TEXT ANALYSIS
+//
+// Text-only agent orchestration. No claim record,
+// no website check — everything is derived from
+// the pasted appeal.
+// =============================================
+
+const APPEAL_MAX_CHARS =
+  60000;
+
+
+app.get(
+  "/api/appeal/orchestration",
+  (req, res) => {
+
+    res.json({
+
+      orchestration:
+        ORCHESTRATION,
+
+      aiAvailable:
+        aiAvailable(),
+
+      provider:
+        activeProvider(),
+
+      model:
+        activeModel()
+
+    });
+
+  }
+);
+
+
+app.post(
+  "/api/appeal/analyze",
+  async (req, res) => {
+
+    try {
+
+      const rawText =
+        typeof req.body?.text ===
+        "string"
+          ? req.body.text
+          : "";
+
+
+      if (
+        !rawText.trim()
+      ) {
+
+        return res
+          .status(400)
+          .json({
+
+            error:
+              "Paste some appeal text to analyse."
+
+          });
+
+      }
+
+
+      if (
+        rawText.length >
+        APPEAL_MAX_CHARS
+      ) {
+
+        return res
+          .status(413)
+          .json({
+
+            error:
+              `Appeal text is ${rawText.length} characters; the limit is ${APPEAL_MAX_CHARS}.`
+
+          });
+
+      }
+
+
+      const report =
+        await orchestrateAppealAnalysis(
+          rawText,
+          {
+
+            useAi:
+              req.body?.useAi !==
+              false,
+
+            claim:
+              req.body?.claim
+                ? cleanClaimInput(
+                    req.body.claim
+                  )
+                : null
+
+          }
+        );
+
+
+      res.json({
+
+        report
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Appeal analysis failed:",
+        error
+      );
+
+
+      res
+        .status(500)
+        .json({
+
+          error:
+            error.message
+
+        });
+
+    }
+
+  }
+);
+
+
 
 app.listen(
   PORT,

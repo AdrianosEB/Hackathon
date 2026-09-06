@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Appeal Text Analysis</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/appeal.css" />
+</head>
+
+<body class="appeal-body">
+
+  <header class="topbar">
+    <div class="brand">Appeal Text Analysis</div>
+
+    <div class="demo-controls">
+      <span class="ai-state" id="aiState">checking AI layer…</span>
+      <a class="secondary link-btn" href="/index.html">Claim dashboard</a>
+    </div>
+  </header>
+
+
+  <main class="appeal-shell">
+
+    <!-- ============ INPUT ============ -->
+    <section class="panel input-panel">
+
+      <div class="section-header">
+        <h2>The claim</h2>
+        <span class="muted">What was actually billed.</span>
+      </div>
+
+      <div class="claim-grid">
+        <label>Claim number<input id="cClaimNumber" type="text" placeholder="A-99231" /></label>
+        <label>Provider<input id="cProvider" type="text" placeholder="Mercy Clinic" /></label>
+        <label>Patient / member<input id="cPatient" type="text" placeholder="J. Doe (member 55512-01)" /></label>
+        <label>Diagnosis codes<input id="cDiagnosis" type="text" placeholder="J18.9, E11.9" /></label>
+      </div>
+
+      <label class="stack">Clinical note
+        <textarea id="cNote" rows="2" placeholder="Note attached to the claim…"></textarea>
+      </label>
+
+      <div class="line-head">
+        <span class="muted">Billed lines</span>
+        <button class="text-btn" id="addLine" type="button">Add line</button>
+      </div>
+
+      <div class="line-table">
+        <div class="line-row line-row-head">
+          <span>Code</span><span>Service date</span><span>Units</span><span>Amount</span><span></span>
+        </div>
+        <div id="claimLines"></div>
+      </div>
+
+      <p class="claim-total" id="claimTotal">No billed lines — the cross-check stage will be skipped.</p>
+
+      <div class="section-header" style="margin-top:6px">
+        <h2>The appeal</h2>
+        <span class="muted">Nothing is fetched or looked up.</span>
+      </div>
+
+      <textarea
+        id="appealText"
+        class="appeal-input"
+        rows="18"
+        placeholder="Paste one or more paragraphs of appeal text here…"
+      ></textarea>
+
+      <div class="live-meter" id="liveMeter">
+        <div class="meter-row">
+          <span><strong id="mWords">0</strong> words</span>
+          <span><strong id="mSentences">0</strong> sentences</span>
+          <span><strong id="mParagraphs">0</strong> paragraphs</span>
+          <span><strong id="mFigures">0</strong> figures</span>
+          <span><strong id="mLines">0</strong> billed lines</span>
+        </div>
+        <div class="meter-plan" id="meterPlan">
+          Triage will classify this as <strong>—</strong>
+        </div>
+      </div>
+
+      <div class="input-actions">
+        <button class="primary" id="analyzeBtn" type="button">
+          Run the orchestration
+        </button>
+
+        <label class="ai-toggle">
+          <input type="checkbox" id="useAi" checked />
+          Include AI second opinion
+        </label>
+      </div>
+
+      <div class="samples">
+        <span class="muted">Load a sample:</span>
+        <button class="text-btn" data-sample="matched" type="button">Matches the claim</button>
+        <button class="text-btn" data-sample="mismatched" type="button">Contradicts the claim</button>
+        <button class="text-btn" data-sample="padded" type="button">Padded &amp; unsupported</button>
+        <button class="text-btn" data-sample="textonly" type="button">No claim record</button>
+      </div>
+
+      <p class="error-line" id="errorLine" hidden></p>
+
+    </section>
+
+
+    <!-- ============ RESULTS ============ -->
+    <section class="results">
+
+      <div class="panel verdict-panel" id="verdictPanel" hidden>
+        <div class="score-ring" id="scoreRing">
+          <span class="score-value" id="scoreValue">—</span>
+          <span class="score-label">integrity</span>
+        </div>
+
+        <div class="verdict-copy">
+          <h2 id="verdictLabel">—</h2>
+          <p id="verdictSummary"></p>
+          <div class="verdict-chips" id="verdictChips"></div>
+        </div>
+      </div>
+
+
+      <div class="panel pipeline-panel" id="pipelinePanel">
+        <div class="section-header">
+          <h2>Orchestration</h2>
+          <span class="muted" id="pipelineNote">
+            Nothing has run yet — the plan below is the static blueprint.
+          </span>
+        </div>
+
+        <div class="waves" id="waves"></div>
+      </div>
+
+
+      <div class="panel output-panel" id="outputPanel" hidden>
+
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-tab="findings" type="button">Findings</button>
+          <button class="tab" data-tab="annotated" type="button">Annotated text</button>
+          <button class="tab" data-tab="crosscheck" type="button">Claim cross-check</button>
+          <button class="tab" data-tab="documentation" type="button">Evidence</button>
+          <button class="tab" data-tab="questions" type="button">Questions to ask</button>
+          <button class="tab" data-tab="blueprint" type="button">Agent reference</button>
+          <button class="tab" data-tab="json" type="button">JSON</button>
+        </div>
+
+        <div class="tab-body" id="tab-findings"></div>
+        <div class="tab-body" id="tab-annotated" hidden></div>
+        <div class="tab-body" id="tab-crosscheck" hidden></div>
+        <div class="tab-body" id="tab-documentation" hidden></div>
+        <div class="tab-body" id="tab-questions" hidden></div>
+        <div class="tab-body" id="tab-blueprint" hidden></div>
+        <div class="tab-body" id="tab-json" hidden></div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="/appeal-samples.js"></script>
+  <script src="/appeal.js"></script>
+
+</body>
+</html>
