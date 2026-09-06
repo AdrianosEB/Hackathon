@@ -18,6 +18,13 @@ import { createSdkMcpServer, tool } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 
 import {
+  validateCikFormat,
+  lookupByCik,
+  searchByName as edgarSearchByName,
+  compareSubmission as edgarCompareSubmission
+} from "./sources/edgar.js";
+
+import {
   validateNpiChecksum,
   lookupByNpi,
   searchByName,
@@ -205,6 +212,152 @@ const npiCompareSubmission = tool(
 // than behind tool search. There are only four and
 // the subagent needs all of them.
 // --------------------------------------------------
+
+// ==================================================
+// COMPANY REGISTRY TOOLS — SEC EDGAR
+//
+// The same four-question shape as the provider tools,
+// pointed at a different federal registry. Read-only,
+// each returns a source URL, none can modify anything.
+// ==================================================
+
+const cikCheckFormat = tool(
+
+  "cik_check_format",
+
+  "Validate a CIK's format offline, with no network call. A CIK is the SEC's numeric " +
+  "identifier for a registrant, up to ten digits. Unlike an NPI it carries NO check digit, " +
+  "so a pass here means only that the value could be a CIK — it cannot detect a transposed " +
+  "digit. Call this first; it is free, and a failure means you can stop.",
+
+  {
+    cik: z.string().describe("The CIK as submitted, with or without leading zeros.")
+  },
+
+  async ({ cik }) => asJson(validateCikFormat(cik)),
+
+  {
+    annotations: { title: "Check CIK format", readOnlyHint: true, openWorldHint: false }
+  }
+
+);
+
+
+const companyLookup = tool(
+
+  "company_lookup",
+
+  "Look up a CIK in SEC EDGAR — the authoritative federal record of entities that file " +
+  "with the Securities and Exchange Commission. Returns the legal name, any former names, " +
+  "business address, state of incorporation, SIC classification, tickers, and filing " +
+  "history. EDGAR has no status flag, so activity is reported as filing recency and is " +
+  "explicitly an inference, not a status.",
+
+  {
+    cik: z.string().describe("The CIK to look up.")
+  },
+
+  async ({ cik }) => asJson(await lookupByCik(cik)),
+
+  {
+    annotations: { title: "Look up company in EDGAR", readOnlyHint: true, openWorldHint: true }
+  }
+
+);
+
+
+const companySearchByName = tool(
+
+  "company_search_by_name",
+
+  "Search EDGAR registrants by company name. This is the DEGRADED path — name matching is " +
+  "inherently ambiguous, and several close matches mean 'could not identify', not 'found'. " +
+  "Prefer a CIK lookup whenever one is available.",
+
+  {
+    name: z.string().describe("The company name as submitted.")
+  },
+
+  async ({ name }) => asJson(await edgarSearchByName(name)),
+
+  {
+    annotations: { title: "Search EDGAR by name", readOnlyHint: true, openWorldHint: true }
+  }
+
+);
+
+
+const companyCompareSubmission = tool(
+
+  "company_compare_submission",
+
+  "Compare what was submitted against the EDGAR record and return computed agreement " +
+  "ratings per field. String similarity is calculated here, deterministically — do not " +
+  "eyeball it yourself. Former names are checked too, because companies rename and that is " +
+  "ordinary. Note that state of incorporation is not the state of operation: a Delaware " +
+  "entity headquartered elsewhere is the common case, not a discrepancy.",
+
+  {
+    companyName: z.string().describe("Company name as submitted."),
+    cik: z.string().describe("The CIK to compare against."),
+    stateOfIncorporation: z.string().optional().describe("Two-letter state, if submitted."),
+    city: z.string().optional().describe("Headquarters city, if submitted."),
+    ticker: z.string().optional().describe("Exchange ticker, if submitted.")
+  },
+
+  async ({ companyName, cik, stateOfIncorporation, city, ticker }) => {
+
+    const lookup = await lookupByCik(cik);
+
+    if (!lookup.found) {
+      return asJson({ compared: false, reason: lookup.reason });
+    }
+
+    return asJson(
+      edgarCompareSubmission(
+        { companyName, stateOfIncorporation, city, ticker },
+        lookup.record
+      )
+    );
+
+  },
+
+  {
+    annotations: { title: "Compare submission to EDGAR", readOnlyHint: true, openWorldHint: true }
+  }
+
+);
+
+
+export const companyTools = createSdkMcpServer({
+
+  name: "company-verification",
+
+  version: "0.1.0",
+
+  instructions:
+    "Read-only access to the SEC EDGAR registrant database. Every tool returns evidence " +
+    "with a source URL. None of them can modify anything.",
+
+  alwaysLoad: true,
+
+  tools: [
+    cikCheckFormat,
+    companyLookup,
+    companySearchByName,
+    companyCompareSubmission
+  ]
+
+});
+
+
+export const COMPANY_TOOL_NAMES = [
+  "mcp__company-verification__cik_check_format",
+  "mcp__company-verification__company_lookup",
+  "mcp__company-verification__company_search_by_name",
+  "mcp__company-verification__company_compare_submission"
+];
+
 
 export const verificationTools = createSdkMcpServer({
 

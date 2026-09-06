@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orchestration test bench</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/test.css" />
+</head>
+
+<body class="bench">
+
+  <header class="bench-top">
+    <div>
+      <p class="eyebrow">CLAIM INTEGRITY · TEST BENCH</p>
+      <h1>Run one subject, see every stage</h1>
+      <p class="subhead">
+        Each button runs a fixed subject through the real pipeline and prints every stage
+        separately — what ran, how long it took, and its raw output. Deterministic stages are
+        marked <span class="k k-det">D</span>, the agent stage <span class="k k-ag">A</span>.
+      </p>
+    </div>
+    <div class="top-actions">
+      <label class="fresh">
+        <input type="checkbox" id="forceFresh" checked />
+        clear the provider cache first
+      </label>
+      <a class="text-btn" href="/">← full UI</a>
+    </div>
+  </header>
+
+
+  <main class="bench-main">
+
+    <section class="runners">
+
+      <article class="runner">
+        <h2>Claim</h2>
+        <p>
+          Invented provider, fixture registry. Built to trip three deterministic rules: the same
+          code twice on one date, both lines far above the reference figure, and a note too short
+          for a high-intensity code.
+        </p>
+        <button class="primary" data-run="claim">Run claim</button>
+        <span class="meta" id="meta-claim"></span>
+      </article>
+
+      <article class="runner">
+        <h2>Appeal</h2>
+        <p>
+          A denied claim, resubmitted with an argument. Adds a stage — including the one that
+          actually moves money: payment details that differ from the ones on file. Trips six
+          appeal rules at once.
+        </p>
+        <button class="primary" data-run="appeal">Run appeal</button>
+        <span class="meta" id="meta-appeal"></span>
+      </article>
+
+      <article class="runner runner-live">
+        <h2>Company <span class="live-tag">live federal data</span></h2>
+        <p>
+          No fixtures. Looks a real company up in <b>SEC EDGAR</b> — US federal, public domain —
+          and fetches its real public website. Same orchestration, different registry.
+        </p>
+        <select id="companyPick" aria-label="Company subject"></select>
+        <button class="primary" data-run="company">Run company check</button>
+        <span class="meta" id="meta-company"></span>
+        <p class="expect" id="companyExpect"></p>
+      </article>
+
+    </section>
+
+
+    <section id="verdict" class="verdict hidden"></section>
+
+    <section id="stages" class="stages">
+      <p class="muted">Pick a subject above. Nothing has been run yet.</p>
+    </section>
+
+  </main>
+
+
+  <footer class="bench-foot">
+    Screening support only. Observations name what a person should look at — not fraud, and not a
+    coverage determination. Fixture NPIs all begin with 9, a range CMS has never assigned.
+  </footer>
+
+
+  <script src="/test.js"></script>
+
+</body>
+</html>

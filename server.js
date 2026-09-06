@@ -3,6 +3,20 @@ import express from "express";
 
 import { analyzeClaim } from "./analyzer.js";
 
+import { clearCachedVerifications } from "./verification/cache.js";
+
+import {
+  runClaimBench,
+  runAppealBench,
+  runCompanyBench
+} from "./verification/testbench.js";
+
+import {
+  TEST_CLAIM,
+  TEST_APPEAL,
+  TEST_COMPANIES
+} from "./fixtures/testbench-subjects.js";
+
 import {
   createClaim,
   getClaim,
@@ -352,6 +366,106 @@ app.post("/api/claims/analyze", async (req, res) => {
     routing,
     outreach
   });
+
+});
+
+
+// -------------------------
+// TEST BENCH
+//
+// Runs a fixed subject through the pipeline and returns
+// every stage separately, so the seam between the
+// deterministic steps and the agentic one is visible
+// rather than implied.
+//
+// No auth: these read fixtures and public federal data,
+// write nothing, and cannot cause anything to be sent.
+// The outreach routes are the ones that need guarding.
+// -------------------------
+
+app.get("/test", (req, res) => {
+  res.sendFile("test.html", { root: "." });
+});
+
+
+app.get("/api/test/subjects", (req, res) => {
+
+  res.json({
+
+    claim: TEST_CLAIM,
+    appeal: TEST_APPEAL,
+
+    companies: Object.entries(TEST_COMPANIES).map(([key, entry]) => ({
+      key,
+      label: entry.label,
+      expect: entry.expect,
+      subject: entry.subject
+    })),
+
+    secConfigured: Boolean(String(process.env.SEC_CONTACT_EMAIL || "").trim())
+
+  });
+
+});
+
+
+// Clear the provider cache so the agent actually runs.
+// The cache is what makes a second claim instant, which
+// is the opposite of what you want when the thing you
+// are trying to watch is the orchestration.
+app.post("/api/test/reset", (req, res) => {
+  res.json(clearCachedVerifications(req.body?.npi || null));
+});
+
+
+app.post("/api/test/claim", async (req, res) => {
+
+  try {
+    res.json(await runClaimBench({ ...TEST_CLAIM, ...(req.body?.overrides || {}) }));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+
+});
+
+
+app.post("/api/test/appeal", async (req, res) => {
+
+  try {
+    res.json(await runAppealBench({ ...TEST_APPEAL, ...(req.body?.overrides || {}) }));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+
+});
+
+
+app.post("/api/test/company", async (req, res) => {
+
+  const key = String(req.body?.key || "gitlab");
+  const entry = TEST_COMPANIES[key];
+
+  if (!entry) {
+    return res.status(400).json({
+      error: `Unknown company subject "${key}".`,
+      available: Object.keys(TEST_COMPANIES)
+    });
+  }
+
+  if (!String(process.env.SEC_CONTACT_EMAIL || "").trim()) {
+    return res.status(400).json({
+      error:
+        "SEC_CONTACT_EMAIL is not set. EDGAR's fair-access policy requires a real contact " +
+        "address in the User-Agent and refuses requests without one. Set it to your own " +
+        "email and restart."
+    });
+  }
+
+  try {
+    res.json(await runCompanyBench(entry.subject));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 
 });
 

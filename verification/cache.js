@@ -315,3 +315,26 @@ function safeParse(value, fallback) {
   }
 
 }
+
+
+// --------------------------------------------------
+// Clear cached verifications
+//
+// For the test bench. The cache is what makes the
+// second claim from a provider instant, which is
+// exactly what you do NOT want when the thing you are
+// trying to watch is the agent running.
+//
+// Pass an NPI to clear one, or nothing to clear all.
+// --------------------------------------------------
+
+export function clearCachedVerifications(npi = null) {
+
+  const result = npi
+    ? db.prepare("DELETE FROM provider_verifications WHERE npi = ?")
+        .run(String(npi).trim())
+    : db.prepare("DELETE FROM provider_verifications").run();
+
+  return { cleared: Number(result.changes || 0) };
+
+}

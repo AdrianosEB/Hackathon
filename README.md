@@ -41,6 +41,48 @@ which the queued row records as its reason.
 Approve, then dispatch. Dispatch is a **dry run**: it prints the exact Vapi payload it would
 have sent and places no call.
 
+## The test bench
+
+<http://localhost:3000/test> runs one subject through the real pipeline and prints **every
+stage separately** — what ran, how long it took, and its raw output. Deterministic stages are
+marked `D`, the agent stage `A`, so the seam is visible rather than implied: the deterministic
+work totals ~0 ms, the agent stage 15–20 s.
+
+Three buttons:
+
+| | |
+|---|---|
+| **Claim** | Invented provider, fixture registry. Trips three deterministic rules. |
+| **Appeal** | A denied claim resubmitted with an argument. Adds a stage — filing window, appealed amount against billed, documentation, denial reason. |
+| **Company** | **No fixtures.** Looks a real company up in SEC EDGAR and fetches its real public website. |
+
+Leave *clear the provider cache first* ticked, or the agent stage is a cache hit and costs
+nothing — which hides the thing the page exists to show.
+
+### The company track
+
+Same orchestration, different registry. [SEC EDGAR](https://www.sec.gov/edgar) is the closest
+structural analogue to NPPES that exists — CIK for NPI, legal name, former names, business
+address, SIC for taxonomy — and it satisfies the same scope rule in
+[verification/registry.js](verification/registry.js): US federal, public domain, published so
+entities can be verified against it. No Google, no open web search, and the company's own site
+is read for corroboration only.
+
+Five subjects, including two controls that must **not** be flagged:
+
+- **GitLab** — everything agrees.
+- **MongoDB** — incorporated in Delaware, headquartered in New York. The most common
+  arrangement in US corporate law, and it must not read as a discrepancy.
+- **Wrong owner** — a real, active CIK with the wrong company name. Comes back blocking.
+- **Absent** — well-formed, never issued.
+- **Malformed** — rejected offline, before any network call.
+
+EDGAR's fair-access policy requires a real contact address in the User-Agent:
+
+```bash
+SEC_CONTACT_EMAIL=you@example.com ./run-local.sh
+```
+
 ## Proving the call path
 
 ```bash

@@ -57,14 +57,27 @@ export ALLOW_LOCAL_WEBSITES="${ALLOW_LOCAL_WEBSITES:-true}"
 # VAPI_ADAPTER=true and DEMO_AUTO_CALL=true — and even
 # then it rings DEMO_BILLING_CONTACT, not a practice.
 export DEMO_BILLING_CONTACT="${DEMO_BILLING_CONTACT:-+15555550123}"
+
+# SEC EDGAR's fair-access policy requires a real contact
+# address in the User-Agent and refuses requests without
+# one. Only the /test company track uses it.
+export SEC_CONTACT_EMAIL="${SEC_CONTACT_EMAIL:-}"
 export VAPI_TARGET_MODE="${VAPI_TARGET_MODE:-demo}"
 
 echo ""
 echo "  Registry fixture   http://localhost:3101"
 echo "  Practice websites  http://localhost:3102"
 echo "  App                http://localhost:3000"
+echo "  Test bench         http://localhost:3000/test"
 echo ""
 echo "  Operator token for the outreach queue: tok_alice"
+
+if [ -z "$SEC_CONTACT_EMAIL" ]; then
+  echo ""
+  echo "  NOTE: SEC_CONTACT_EMAIL is not set, so the live company check on /test"
+  echo "        will refuse. EDGAR requires a real contact address. Run with:"
+  echo "          SEC_CONTACT_EMAIL=you@example.com ./run-local.sh"
+fi
 echo ""
 
 node server.js & PIDS+=($!)

@@ -26,7 +26,7 @@
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
-import { verificationTools } from "./tools.js";
+import { verificationTools, companyTools } from "./tools.js";
 import { ALL_AGENTS } from "./agents.js";
 import { SOURCES, enabledSources, coverageReport, BLOCKING_DIMENSIONS } from "./registry.js";
 
@@ -98,7 +98,18 @@ function extractFinding(text, dimension) {
 // Run one specialist
 // --------------------------------------------------
 
-async function runSpecialist(source, claim) {
+async function runSpecialist(source, claim, options = {}) {
+
+  // The MCP server and the brief are injectable so the
+  // same runner drives a different registry. Everything
+  // that matters — tool confinement, the timeout, the
+  // JSON contract, adjudication — is shared, which is
+  // the point: swapping the data source must not mean
+  // re-implementing the safety properties.
+  const {
+    mcpServers = { "provider-verification": verificationTools },
+    buildBrief = null
+  } = options;
 
   const definition = ALL_AGENTS[source.agent];
 
@@ -115,7 +126,7 @@ async function runSpecialist(source, claim) {
 
   }
 
-  const brief = [
+  const brief = buildBrief ? buildBrief(source, claim) : [
     `Assess the "${source.id}" dimension for the billing provider on this claim.`,
     "",
     "CLAIM:",
@@ -183,9 +194,7 @@ async function runSpecialist(source, claim) {
 
           maxTurns: definition.maxTurns,
 
-          mcpServers: {
-            "provider-verification": verificationTools
-          },
+          mcpServers,
 
           // ---- TOOL CONFINEMENT ----
           //
@@ -505,6 +514,118 @@ export async function verifyProvider(claim) {
   return {
     ...result,
     npi: claim.npi || null,
+    durationMs: Date.now() - startedAt,
+    verifiedAt: new Date().toISOString()
+  };
+
+}
+
+
+// ==================================================
+// COMPANY VERIFICATION
+//
+// The same orchestration, a different registry.
+//
+// Nothing below re-implements the parts that carry the
+// safety properties: runSpecialist() confines the tools
+// and enforces the timeout, adjudicate() applies the
+// blocking rule and the coverage cap, and the finding
+// contract is identical. Only the data source and the
+// brief change.
+//
+// Useful for exactly one reason: it demonstrates that
+// the design is about how you reason over a registry,
+// not about healthcare.
+// ==================================================
+
+const COMPANY_SOURCE = {
+  id: "company",
+  label: "Company identity",
+  agent: "company-verifier",
+  enabled: true,
+  provenance: "US federal registry (SEC EDGAR), public domain",
+  weight: 1.0,
+  question:
+    "Does this CIK exist, is the entity still filing, and does the registry record " +
+    "correspond to the company named in the submission?"
+};
+
+
+function buildCompanyBrief(source, subject) {
+
+  return [
+    `Assess the "${source.id}" dimension for the organisation in this submission.`,
+    "",
+    "SUBMISSION:",
+    JSON.stringify(
+      {
+        submissionRef: subject.submissionRef || null,
+        companyName: subject.companyName || null,
+        cik: subject.cik || null,
+        stateOfIncorporation: subject.stateOfIncorporation || null,
+        city: subject.city || null,
+        state: subject.state || null,
+        ticker: subject.ticker || null,
+        website: subject.website || null
+      },
+      null,
+      2
+    ),
+    "",
+    "Follow your procedure and reply with your JSON finding object and nothing else."
+  ].join("\n");
+
+}
+
+
+export async function verifyCompany(subject) {
+
+  const startedAt = Date.now();
+
+  // One dimension is live, so coverage is stated
+  // honestly rather than implied: this checks that the
+  // entity is registered, and nothing else about it.
+  const coverage = {
+    checked: ["company"],
+    skipped: [
+      {
+        id: "sanctions",
+        label: "Federal exclusions",
+        reason: "Not wired for the company track."
+      },
+      {
+        id: "filings",
+        label: "Filing content",
+        reason:
+          "Reads the existence and recency of filings, never their contents. Reading the " +
+          "filings themselves is a different question and a much larger one."
+      }
+    ],
+    completeness: 0.5
+  };
+
+  const finding = await runSpecialist(COMPANY_SOURCE, subject, {
+    mcpServers: { "company-verification": companyTools },
+    buildBrief: buildCompanyBrief
+  });
+
+  // BLOCKING_DIMENSIONS is keyed by dimension id, and
+  // "company" is not in it — so adjudicate() would treat
+  // a mismatch as ordinary negative weight rather than
+  // as disqualifying. Identity is disqualifying on the
+  // provider side for a reason that applies just as
+  // squarely here: if the identifier belongs to someone
+  // else, there is no entity to assess. Adjudicate
+  // against the identity id so the same rule fires.
+  const asIdentity = { ...finding, dimension: "identity" };
+
+  const result = adjudicate([asIdentity], coverage);
+
+  return {
+    ...result,
+    checks: [finding],
+    cik: subject.cik || null,
+    companyName: subject.companyName || null,
     durationMs: Date.now() - startedAt,
     verifiedAt: new Date().toISOString()
   };
