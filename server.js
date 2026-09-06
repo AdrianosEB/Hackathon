@@ -1719,6 +1719,49 @@ app.listen(
     );
 
 
+    // =========================================
+    // Vapi credential check
+    //
+    // vapi.js needs all four of these before it
+    // will place a call. Without them a claim is
+    // still analyzed, saved and routed; only the
+    // clarification call is skipped.
+    //
+    // Names only. Never print a credential value.
+    // =========================================
+
+    if (
+      process.env
+        .DEMO_AUTO_CALL ===
+      "true"
+    ) {
+
+      const missingVapiSettings =
+        [
+          "VAPI_API_KEY",
+          "VAPI_ASSISTANT_ID",
+          "VAPI_PHONE_NUMBER_ID",
+          "DEMO_BILLING_CONTACT"
+        ].filter(
+          (name) =>
+            !process.env[name]
+        );
+
+
+      console.log(
+        missingVapiSettings.length ===
+        0
+
+          ? "Vapi credentials: complete"
+
+          : `Vapi credentials: MISSING ${
+              missingVapiSettings.join(", ")
+            } - claims will be analyzed but calls will be skipped`
+      );
+
+    }
+
+
     console.log(
       "Appeal review: enabled"
     );
