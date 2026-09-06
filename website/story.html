@@ -38,7 +38,10 @@
   <!-- persistent chrome -->
   <header class="chrome">
     <span class="mark">CLAIM&nbsp;INTEGRITY</span>
-    <a class="chrome-link" href="/">DASHBOARD&nbsp;↗</a>
+    <span class="chrome-right">
+      <span class="status" id="status" hidden></span>
+      <a class="chrome-link" href="/">DASHBOARD&nbsp;↗</a>
+    </span>
   </header>
 
   <div class="scene-tag"><span id="sceneTag">SCENE 01</span></div>
@@ -181,6 +184,8 @@
 
           <div id="parsed" class="parsed" hidden></div>
           <div id="dropError" class="oops" hidden></div>
+
+          <div id="statusNote" class="status-note" hidden></div>
 
           <button class="cta" id="runBtn" disabled>
             <span>RUN BOTH AXES</span>

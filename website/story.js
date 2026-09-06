@@ -1523,6 +1523,84 @@ import { claimFromCsv, appealFromTxt } from "/parsers.js";
 
 
   // =============================================
+  // WHAT IS SWITCHED ON
+  //
+  // Every leg of this pipeline degrades rather than fails when its
+  // credential is missing: the evidence review reports "unavailable"
+  // and the deterministic rules stand, the registry reports
+  // "incomplete" and the claim is still assessed. That is the right
+  // behaviour, and it is also how you demo the whole thing without
+  // noticing the model never ran once.
+  //
+  // So say it, before anything is run rather than after.
+  // =============================================
+
+  async function loadStatus() {
+
+    let health = null, coverage = null;
+
+    try {
+      health = await (await fetch("/api/health")).json();
+    } catch (error) {
+      $("status").innerHTML = `<i></i>API UNREACHABLE`;
+      $("status").hidden = false;
+      return;
+    }
+
+    try {
+      coverage = await (await fetch("/api/verification/coverage")).json();
+    } catch (error) {
+      coverage = null;
+    }
+
+    const off = [];
+
+    if (!health.aiKeyLoaded) off.push("EVIDENCE REVIEW OFF");
+
+    const pct = coverage?.completeness != null
+      ? Math.round(coverage.completeness * 100) : null;
+
+    if (pct != null && pct < 100) off.push(`REGISTRY ${pct}%`);
+
+    if (!off.length) {
+      $("status").innerHTML = `<i></i>ALL CHECKS LIVE`;
+      $("status").hidden = false;
+      $("statusNote").hidden = true;
+      return;
+    }
+
+    $("status").innerHTML = `<i></i>${off.join(" · ")}`;
+    $("status").hidden = false;
+
+    // The fuller version, where you are about to run something.
+    const lines = [];
+
+    if (!health.aiKeyLoaded) {
+      lines.push(
+        `<strong>The AI evidence review is not running</strong> — no
+         <code>OPENAI_API_KEY</code> is set. Claims are still assessed by the deterministic
+         rules, and every finding will say <code>rules</code> rather than
+         <code>rules + ai</code>. Nothing is hidden from you; the model simply is not asked.`
+      );
+    }
+
+    if (pct != null && pct < 100) {
+      const skipped = (coverage.skipped || []).map((s) => s.label || s.id).join(", ");
+      lines.push(
+        `Provider verification covers ${pct}% of its checks${
+          skipped ? ` — not checked: ${esc(skipped)}` : ""}. That is a gap in our coverage,
+         never a finding about a provider.`
+      );
+    }
+
+    $("statusNote").innerHTML =
+      `<b>BEFORE YOU RUN THIS</b>` + lines.map((l) => `<p>${l}</p>`).join("");
+
+    $("statusNote").hidden = false;
+  }
+
+
+  // =============================================
   // THE APPEAL
   //
   // A finding is not a verdict. The provider answers it, and the
@@ -1833,6 +1911,7 @@ import { claimFromCsv, appealFromTxt } from "/parsers.js";
 
   renderFixtures();
   renderAppealFixtures();
+  loadStatus();
   loadField();
   loadLedger();
   loadAppeals();
