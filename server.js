@@ -3,20 +3,12 @@ import "dotenv/config";
 import express from "express";
 
 import {
-  analyzeClaim
-} from "./analyzer.js";
+  orchestrateClaim
+} from "./orchestration/claim-orchestrator.js";
 
 import {
-  reviewClaimWithAI
-} from "./ai-reviewer.js";
-
-import {
-  analyzeAppeal
-} from "./appeal-analyzer.js";
-
-import {
-  reviewAppealWithAI
-} from "./appeal-ai-reviewer.js";
+  orchestrateAppeal
+} from "./orchestration/appeal-orchestrator.js";
 
 import {
   queueVapiCall,
@@ -75,234 +67,6 @@ app.use(
     "website"
   )
 );
-
-
-// =============================================
-// Risk helper
-// =============================================
-
-function deriveRiskLevelFromFlags(
-  flags = []
-) {
-
-  if (
-    flags.some(
-      (flag) =>
-        flag.severity ===
-        "high"
-    )
-  ) {
-
-    return "high";
-
-  }
-
-
-  if (
-    flags.some(
-      (flag) =>
-        flag.severity ===
-        "medium"
-    )
-  ) {
-
-    return "review";
-
-  }
-
-
-  return "low";
-
-}
-
-
-// =============================================
-// Normalize AI finding
-// =============================================
-
-function normalizeAiFinding(
-  finding
-) {
-
-  return {
-
-    lineCode:
-      finding.lineCode ||
-      "",
-
-    severity:
-      finding.severity ||
-      "medium",
-
-    type:
-      finding.reason ||
-      "needs_review",
-
-    message:
-      finding.message ||
-      "",
-
-    evidence:
-      finding.evidence ||
-      "",
-
-    detectedBy:
-      ["ai"],
-
-    aiReview: {
-
-      severity:
-        finding.severity ||
-        "medium",
-
-      reason:
-        finding.reason ||
-        "needs_review",
-
-      message:
-        finding.message ||
-        "",
-
-      evidence:
-        finding.evidence ||
-        ""
-
-    }
-
-  };
-
-}
-
-
-// =============================================
-// Merge claim Rules + AI findings
-// =============================================
-
-function mergeAiFindings(
-  analysis,
-  aiReview
-) {
-
-  if (
-    !aiReview?.available
-  ) {
-
-    return;
-
-  }
-
-
-  const aiFindings =
-
-    Array.isArray(
-      aiReview.findings
-    )
-
-      ? aiReview.findings
-
-      : [];
-
-
-  for (
-    const aiFinding
-    of aiFindings
-  ) {
-
-    const matchingFlag =
-      analysis.flags.find(
-        (flag) =>
-
-          flag.lineCode &&
-
-          aiFinding.lineCode &&
-
-          flag.lineCode ===
-            aiFinding.lineCode
-      );
-
-
-    if (
-      matchingFlag
-    ) {
-
-      if (
-        !Array.isArray(
-          matchingFlag.detectedBy
-        )
-      ) {
-
-        matchingFlag.detectedBy =
-          ["rules"];
-
-      }
-
-
-      if (
-        !matchingFlag.detectedBy.includes(
-          "ai"
-        )
-      ) {
-
-        matchingFlag.detectedBy.push(
-          "ai"
-        );
-
-      }
-
-
-      matchingFlag.aiReview = {
-
-        severity:
-          aiFinding.severity,
-
-        reason:
-          aiFinding.reason,
-
-        message:
-          aiFinding.message,
-
-        evidence:
-          aiFinding.evidence
-
-      };
-
-
-      if (
-        aiFinding.severity ===
-        "high"
-      ) {
-
-        matchingFlag.severity =
-          "high";
-
-      } else if (
-        aiFinding.severity ===
-          "medium" &&
-
-        matchingFlag.severity !==
-          "high"
-      ) {
-
-        matchingFlag.severity =
-          "medium";
-
-      }
-
-
-      continue;
-
-    }
-
-
-    analysis.flags.push(
-      normalizeAiFinding(
-        aiFinding
-      )
-    );
-
-  }
-
-}
 
 
 // =============================================
@@ -747,172 +511,6 @@ function validateAppeal(
 
 
 // =============================================
-// Final appeal outcome
-//
-// RULES and AI remain independent reviewers.
-//
-// Dashboard mapping:
-//
-// resolved
-// -> COMPLETED
-//
-// partially_resolved
-// -> PENDING
-//
-// not_resolved
-// -> PENDING
-//
-// IMPORTANT:
-//
-// A deterministic contradiction that remains should
-// not be completely cleared merely because AI says
-// resolved.
-// =============================================
-
-function deriveFinalAppealOutcome(
-  rulesReview,
-  aiReview
-) {
-
-  const rulesOutcome =
-    rulesReview?.outcome ||
-    "not_resolved";
-
-
-  // ===========================================
-  // If OpenAI is unavailable, deterministic
-  // appeal review still works.
-  // ===========================================
-
-  if (
-    !aiReview?.available
-  ) {
-
-    return rulesOutcome;
-
-  }
-
-
-  const aiOutcome =
-    aiReview.outcome ||
-    "not_resolved";
-
-
-  // ===========================================
-  // Both reviewers fully resolved everything.
-  // ===========================================
-
-  if (
-    rulesOutcome ===
-      "resolved" &&
-
-    aiOutcome ===
-      "resolved"
-  ) {
-
-    return "resolved";
-
-  }
-
-
-  // ===========================================
-  // Deterministic contradiction remains.
-  //
-  // If AI says fully resolved, that means there
-  // was meaningful appeal evidence, but an
-  // objective Rules condition still remains.
-  //
-  // Therefore the best final result is partial.
-  // ===========================================
-
-  if (
-    rulesOutcome ===
-      "not_resolved"
-  ) {
-
-    if (
-      aiOutcome ===
-      "resolved"
-    ) {
-
-      return "partially_resolved";
-
-    }
-
-
-    if (
-      aiOutcome ===
-      "partially_resolved"
-    ) {
-
-      return "not_resolved";
-
-    }
-
-
-    return "not_resolved";
-
-  }
-
-
-  // ===========================================
-  // Rules found meaningful partial correction.
-  // The overall appeal cannot be completed yet.
-  // ===========================================
-
-  if (
-    rulesOutcome ===
-      "partially_resolved"
-  ) {
-
-    return "partially_resolved";
-
-  }
-
-
-  // ===========================================
-  // Rules are completely resolved.
-  //
-  // AI determines whether original evidentiary
-  // concerns remain.
-  // ===========================================
-
-  if (
-    rulesOutcome ===
-      "resolved"
-  ) {
-
-    if (
-      aiOutcome ===
-      "partially_resolved"
-    ) {
-
-      return "partially_resolved";
-
-    }
-
-
-    if (
-      aiOutcome ===
-      "not_resolved"
-    ) {
-
-      return "not_resolved";
-
-    }
-
-
-    return "resolved";
-
-  }
-
-
-  return "not_resolved";
-
-}
-
-
-// =============================================
 // Normalize Vapi transcript
 // =============================================
 
@@ -1219,174 +817,26 @@ app.post(
       }
 
 
-      console.log(
-        `Analyzing claim ${cleanClaim.claimNumber}...`
-      );
-
-
       // =======================================
-      // RULES
+      // ORCHESTRATION
+      //
+      // Deterministic rules, AI evidence review,
+      // the merge, and the routing decision all
+      // live in the claim orchestrator.
       // =======================================
 
-      const analysis =
-        analyzeClaim(
+      const decision =
+        await orchestrateClaim(
           cleanClaim
         );
 
 
-      analysis.flags =
-
-        Array.isArray(
-          analysis.flags
-        )
-
-          ? analysis.flags.map(
-              (flag) => ({
-
-                ...flag,
-
-                detectedBy:
-
-                  Array.isArray(
-                    flag.detectedBy
-                  )
-
-                    ? flag.detectedBy
-
-                    : ["rules"]
-
-              })
-            )
-
-          : [];
-
-
-      const rulesRiskLevel =
-        deriveRiskLevelFromFlags(
-          analysis.flags
-        );
-
-
-      // =======================================
-      // AI
-      // =======================================
-
-      let aiReview = {
-
-        available:
-          false,
-
-        findings:
-          []
-
-      };
-
-
-      try {
-
-        console.log(
-          `Running AI review for claim ${cleanClaim.claimNumber}...`
-        );
-
-
-        aiReview =
-          await reviewClaimWithAI(
-            cleanClaim
-          );
-
-
-        if (
-          aiReview.available
-        ) {
-
-          console.log(
-            `AI review complete. ${
-              aiReview.findings
-                ?.length ||
-              0
-            } finding(s).`
-          );
-
-        }
-
-      } catch (
-        error
-      ) {
-
-        console.error(
-          "AI review error:",
-          error.message
-        );
-
-
-        aiReview = {
-
-          available:
-            false,
-
-          findings:
-            [],
-
-          error:
-            error.message
-
-        };
-
-      }
-
-
-      const aiRiskLevel =
-
-        aiReview.available
-
-          ? deriveRiskLevelFromFlags(
-              aiReview.findings ||
-              []
-            )
-
-          : "unavailable";
-
-
-      // =======================================
-      // MERGE CLAIM RULES + AI
-      // =======================================
-
-      mergeAiFindings(
-        analysis,
-        aiReview
-      );
+      const analysis =
+        decision.analysis;
 
 
       const finalRiskLevel =
-        deriveRiskLevelFromFlags(
-          analysis.flags
-        );
-
-
-      analysis.rulesRiskLevel =
-        rulesRiskLevel;
-
-
-      analysis.aiRiskLevel =
-        aiRiskLevel;
-
-
-      analysis.riskLevel =
-        finalRiskLevel;
-
-
-      analysis.aiAvailable =
-        aiReview.available ===
-        true;
-
-
-      analysis.analysisMode =
-
-        aiReview.available
-
-          ? "hybrid"
-
-          : "rules";
+        decision.verdict.riskLevel;
 
 
       // =======================================
@@ -1410,12 +860,7 @@ app.post(
       // =======================================
 
       const shouldCall =
-
-        finalRiskLevel ===
-          "review" ||
-
-        finalRiskLevel ===
-          "high";
+        decision.routing.shouldCallProvider;
 
 
       if (
@@ -2051,118 +1496,30 @@ app.post(
 
 
       // =======================================
-      // DETERMINISTIC APPEAL REVIEW
+      // ORCHESTRATION
+      //
+      // Deterministic re-check, AI evidence
+      // comparison, reconciliation, and routing all
+      // live in the appeal orchestrator.
       // =======================================
 
-      console.log(
-        `Running deterministic appeal review for ${cleanAppeal.claimNumber}...`
-      );
-
-
-      const rulesReview =
-        analyzeAppeal(
+      const decision =
+        await orchestrateAppeal(
           originalClaim,
           cleanAppeal
         );
 
 
-      console.log(
-        `Appeal Rules outcome for ${cleanAppeal.claimNumber}: ${rulesReview.outcome}`
-      );
+      const rulesReview =
+        decision.rulesReview;
 
 
-      // =======================================
-      // AI APPEAL REVIEW
-      // =======================================
+      const aiReview =
+        decision.aiReview;
 
-      let aiReview = {
-
-        available:
-          false,
-
-        outcome:
-          "unavailable",
-
-        summary:
-          "AI appeal evidence review unavailable.",
-
-        results:
-          []
-
-      };
-
-
-      try {
-
-        console.log(
-          `Running AI appeal review for ${cleanAppeal.claimNumber}...`
-        );
-
-
-        aiReview =
-          await reviewAppealWithAI(
-            originalClaim,
-            cleanAppeal
-          );
-
-
-        if (
-          aiReview.available
-        ) {
-
-          console.log(
-            `Appeal AI outcome for ${cleanAppeal.claimNumber}: ${aiReview.outcome}`
-          );
-
-        } else {
-
-          console.log(
-            `Appeal AI unavailable for ${cleanAppeal.claimNumber}. Using deterministic result.`
-          );
-
-        }
-
-      } catch (
-        error
-      ) {
-
-        console.error(
-          "AI appeal review error:",
-          error.message
-        );
-
-
-        aiReview = {
-
-          available:
-            false,
-
-          outcome:
-            "unavailable",
-
-          summary:
-            "AI appeal evidence review unavailable.",
-
-          results:
-            [],
-
-          error:
-            error.message
-
-        };
-
-      }
-
-
-      // =======================================
-      // FINAL APPEAL OUTCOME
-      // =======================================
 
       const finalOutcome =
-        deriveFinalAppealOutcome(
-          rulesReview,
-          aiReview
-        );
+        decision.finalOutcome;
 
 
       // =======================================
@@ -2239,13 +1596,7 @@ app.post(
             finalOutcome,
 
             workflowStatus:
-
-              finalOutcome ===
-                "resolved"
-
-                ? "completed"
-
-                : "pending"
+              decision.workflowStatus
 
           }
 
