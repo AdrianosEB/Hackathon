@@ -646,6 +646,7 @@ import { claimFromCsv, appealFromTxt } from "/parsers.js";
 
       return {
         claims: nodes.length,
+        assessed: claims.length,
         positions: stacks.size,
         providers: hubs.length,
         links: hubs.reduce((sum, h) => sum + h.members.length, 0)
@@ -841,7 +842,11 @@ import { claimFromCsv, appealFromTxt } from "/parsers.js";
         `ONE DOT IS ONE CLAIM — CLAIMS SCORING IDENTICALLY ARE FANNED APART SO NONE HIDES ANOTHER<br />` +
         `${stats.providers} RING${stats.providers === 1 ? "" : "S"} — EACH MARKS A PROVIDER WITH MORE THAN ` +
         `ONE CLAIM, AT THE CENTRE OF ITS OWN`
-      : "NO CLAIMS ASSESSED YET — THE AXES ARE EMPTY, WHICH IS THE HONEST PICTURE.";
+      : stats.assessed
+        ? `${stats.assessed} CLAIM${stats.assessed === 1 ? "" : "S"} ASSESSED, NONE WITH A ` +
+          `PROVIDER SCORE YET — SO THERE IS NOTHING TO PLOT ON THE SECOND AXIS.<br />` +
+          `THAT IS A GAP IN OUR COVERAGE, NOT A FINDING ABOUT ANY PROVIDER.`
+        : "NO CLAIMS ASSESSED YET — THE AXES ARE EMPTY, WHICH IS THE HONEST PICTURE.";
   }
 
 
